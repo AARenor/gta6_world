@@ -6,26 +6,6 @@
 import { CITY, PALETTE, VEHICLES } from './config.js';
 import { createRandom } from './random.js';
 
-const SIGN_WORDS = [
-  'VELVET ROOM', 'TIKI TONIC', 'MOTEL 9', 'SODA POP', 'GOLDEN HOUR', 'PALM STATIC',
-  'BAIT & TACKLE', 'NEON DRIFT', 'THE TIDEPOOL', 'MAMBO', 'CINEMA', 'LIQUOR',
-  'DINER', 'HOTEL VELA', 'PAWN', 'SURF CO', 'TATTOO', 'ARCADE', 'CAFÉ LUNA', 'SEA GLASS',
-  'MOTHER OF PEARL', 'CINDER GRILL', 'LAST CALL', 'BLUE HOUR', 'CORAL CLUB', 'PIER 12',
-];
-
-const SHOP_WORDS = ['TACOS', 'RECORDS', 'PAWN', 'SUNGLASS', 'BOARDWALK', 'DONUTS', 'TATTOO', 'SURF', 'CAFÉ', 'FLOWERS'];
-
-const WALLS = ['#e8735a', '#f0c9a6', '#2f8a8a', '#c13c74', '#4a3f63', '#e9dcc0', '#8fb7a6', '#f2a06b', '#b04a54', '#7f9fb5'];
-const ROOFS = ['#a9535f', '#c9a17e', '#256f74', '#8f2c5a', '#3a3250', '#c3b492', '#6f9587', '#c77f50', '#8c3a44', '#637c92'];
-const AWNINGS = ['#ff2f92', '#26efd4', '#ffc247', '#ff6a3d', '#9d6bff', '#b8ff5e'];
-
-/** How far a thing of height z rises up the screen: the city is viewed at a slight tilt. */
-export const RISE = 0.27;
-
-export function riseOf(z) {
-  return z * RISE;
-}
-
 export function createCity(seed = CITY.seed) {
   const rng = createRandom(seed);
   const blocks = [];
@@ -509,4 +489,27 @@ export function shade(hex, amount) {
 
 export function vehicleColor(rng, type) {
   return rng.pick(VEHICLES[type].colors);
+}
+
+// The city's own vocabulary: the words on its signs, the colours of its walls and awnings, and the
+// slight tilt the whole grid is drawn with.
+
+const SIGN_WORDS = [
+  'VELVET ROOM', 'TIKI TONIC', 'MOTEL 9', 'SODA POP', 'GOLDEN HOUR', 'PALM STATIC',
+  'BAIT & TACKLE', 'NEON DRIFT', 'THE TIDEPOOL', 'MAMBO', 'CINEMA', 'LIQUOR',
+  'DINER', 'HOTEL VELA', 'PAWN', 'SURF CO', 'TATTOO', 'ARCADE', 'CAFÉ LUNA', 'SEA GLASS',
+  'MOTHER OF PEARL', 'CINDER GRILL', 'LAST CALL', 'BLUE HOUR', 'CORAL CLUB', 'PIER 12',
+];
+
+const SHOP_WORDS = ['TACOS', 'RECORDS', 'PAWN', 'SUNGLASS', 'BOARDWALK', 'DONUTS', 'TATTOO', 'SURF', 'CAFÉ', 'FLOWERS'];
+
+const WALLS = ['#e8735a', '#f0c9a6', '#2f8a8a', '#c13c74', '#4a3f63', '#e9dcc0', '#8fb7a6', '#f2a06b', '#b04a54', '#7f9fb5'];
+const ROOFS = ['#a9535f', '#c9a17e', '#256f74', '#8f2c5a', '#3a3250', '#c3b492', '#6f9587', '#c77f50', '#8c3a44', '#637c92'];
+const AWNINGS = ['#ff2f92', '#26efd4', '#ffc247', '#ff6a3d', '#9d6bff', '#b8ff5e'];
+
+/** How far a thing of height z rises up the screen: the city is viewed at a slight tilt. */
+export const RISE = 0.27;
+
+export function riseOf(z) {
+  return z * RISE;
 }

@@ -8,4 +8,4 @@ Vesper City — Sunset Syndicate is a top-down open-world crime game in an origi
 
 The game is plain static files under `game/`: one HTML page and its ES modules, no build step, no library and no network request, so any static server plays it offline. `main.ts` (Node 22, standard library only) hands it in: it copies `game/` and `screenshots/` to `/output` and writes `/output/dossier.json` with `buildDossier` from `vendor/makefun-game.ts`, the kit's library unchanged. Play it locally with `node serve.ts` and open http://localhost:8080, or build the hand-in with `MAKEFUN_OUTPUT_DIR=out node main.ts`.
 
-![cover](screenshots/1-cover.jpg)
+![cover](screenshots/1-cover-vesper-city-night.jpg)

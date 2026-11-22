@@ -1,6 +1,6 @@
 [
-  { "name": "1-cover.jpg", "query": "?scene=cover" },
-  { "name": "2-chase.jpg", "query": "?scene=chase" },
-  { "name": "3-mission.jpg", "query": "?scene=mission" },
-  { "name": "4-onfoot.jpg", "query": "?scene=onfoot" }
+  { "name": "1-cover-vesper-city-night.jpg", "query": "?scene=cover" },
+  { "name": "2-police-chase.jpg", "query": "?scene=chase" },
+  { "name": "3-mission-briefing.jpg", "query": "?scene=mission" },
+  { "name": "4-street-on-foot.jpg", "query": "?scene=onfoot" }
 ]

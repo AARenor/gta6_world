@@ -925,13 +925,13 @@ export function createRenderer(canvas) {
     ctx.save();
     ctx.translate(v.x, v.y);
     if (v.driver === 'player') {
-      const halo = ctx.createRadialGradient(0, 0, 2, 0, 0, 58);
-      halo.addColorStop(0, 'rgba(255, 226, 170, 0.16)');
-      halo.addColorStop(0.6, 'rgba(255, 200, 130, 0.06)');
+      const halo = ctx.createRadialGradient(0, 0, 2, 0, 0, 64);
+      halo.addColorStop(0, 'rgba(255, 232, 180, 0.26)');
+      halo.addColorStop(0.6, 'rgba(255, 200, 130, 0.09)');
       halo.addColorStop(1, 'rgba(255, 200, 130, 0)');
       ctx.fillStyle = halo;
       ctx.beginPath();
-      ctx.arc(0, 0, 58, 0, Math.PI * 2);
+      ctx.arc(0, 0, 64, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.rotate(v.angle);
@@ -989,14 +989,14 @@ export function createRenderer(canvas) {
         ctx.fillStyle = '#181420';
         roundRectLocal(ctx, -len * 0.2, -wid * 0.44, len * 0.3, wid * 0.88, 2);
         ctx.fill();
-        // Lightbar.
+        // Lightbar, big enough to read at a glance when the frame is shrunk.
         const redOn = Math.sin((game.clock * 12 + v.id) % (Math.PI * 2)) > 0;
         ctx.fillStyle = redOn ? '#ff3355' : '#6d1b2a';
-        ctx.fillRect(-len * 0.04, -wid * 0.56, len * 0.14, wid * 0.34);
+        ctx.fillRect(-len * 0.1, -wid * 0.62, len * 0.22, wid * 0.44);
         ctx.fillStyle = redOn ? '#2b3f7a' : '#3d7bff';
-        ctx.fillRect(-len * 0.04, wid * 0.22, len * 0.14, wid * 0.34);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-        ctx.fillRect(-len * 0.04, -wid * 0.56, len * 0.14, 1.4);
+        ctx.fillRect(-len * 0.1, wid * 0.18, len * 0.22, wid * 0.44);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+        ctx.fillRect(-len * 0.1, -wid * 0.62, len * 0.22, 2);
       }
       // Headlights and tail lights.
       ctx.fillStyle = '#fff4cf';
@@ -1020,20 +1020,20 @@ export function createRenderer(canvas) {
     ctx.restore();
     if (v.burning > 0) {
       const t = game.clock;
-      const glow = ctx.createRadialGradient(v.x, v.y - 8, 2, v.x, v.y - 8, 48);
-      glow.addColorStop(0, 'rgba(255, 156, 64, 0.5)');
-      glow.addColorStop(0.5, 'rgba(255, 92, 30, 0.2)');
+      const glow = ctx.createRadialGradient(v.x, v.y - 8, 2, v.x, v.y - 8, 68);
+      glow.addColorStop(0, 'rgba(255, 168, 80, 0.62)');
+      glow.addColorStop(0.5, 'rgba(255, 92, 30, 0.26)');
       glow.addColorStop(1, 'rgba(255, 80, 20, 0)');
       ctx.fillStyle = glow;
       ctx.beginPath();
-      ctx.arc(v.x, v.y - 8, 48, 0, Math.PI * 2);
+      ctx.arc(v.x, v.y - 8, 68, 0, Math.PI * 2);
       ctx.fill();
       for (let k = 0; k < 3; k += 1) {
-        const ox = Math.sin(t * 9 + k * 2.1) * 7;
-        const h = 11 + Math.sin(t * 13 + k) * 4;
-        ctx.fillStyle = k === 1 ? 'rgba(255, 226, 130, 0.9)' : 'rgba(255, 120, 40, 0.8)';
+        const ox = Math.sin(t * 9 + k * 2.1) * 9;
+        const h = 16 + Math.sin(t * 13 + k) * 6;
+        ctx.fillStyle = k === 1 ? 'rgba(255, 236, 150, 0.95)' : 'rgba(255, 120, 40, 0.85)';
         ctx.beginPath();
-        ctx.ellipse(v.x + ox, v.y - 10 - k * 3, 6 + k, h, 0, 0, Math.PI * 2);
+        ctx.ellipse(v.x + ox, v.y - 12 - k * 3, 8 + k, h, 0, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.fillStyle = 'rgba(44, 32, 44, 0.32)';
@@ -1063,7 +1063,12 @@ export function createRenderer(canvas) {
     }
     const moving = ped.state === 'walk' || ped.state === 'flee' || ped.state === 'cross';
     const swing = moving ? Math.sin(ped.walk * 3.2) * 3.4 : 0;
-    ctx.scale(1.16, 1.16);
+    // A soft shadow under every figure, so a crowd reads as silhouettes at a glance.
+    ctx.fillStyle = 'rgba(10, 6, 16, 0.45)';
+    ctx.beginPath();
+    ctx.ellipse(-1, 0, 8.5, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.scale(1.3, 1.3);
     // Legs.
     ctx.strokeStyle = ped.pants;
     ctx.lineWidth = 3;
@@ -1333,13 +1338,13 @@ export function createRenderer(canvas) {
     for (const board of game.city.billboards) {
       if (board.x < view.x0 - 140 || board.x > view.x1 + 140 || board.y < view.y0 || board.y > view.y1 + 200) continue;
       const cy = board.y - board.h - 20 + board.h * 0.5;
-      const g = ctx.createRadialGradient(board.x, cy, 0, board.x, cy, 120);
-      g.addColorStop(0, hexToRgba(board.color, 0.18 * warm));
-      g.addColorStop(0.5, hexToRgba(board.color, 0.06 * warm));
+      const g = ctx.createRadialGradient(board.x, cy, 0, board.x, cy, 78);
+      g.addColorStop(0, hexToRgba(board.color, 0.14 * warm));
+      g.addColorStop(0.5, hexToRgba(board.color, 0.05 * warm));
       g.addColorStop(1, hexToRgba(board.color, 0));
       ctx.fillStyle = g;
       ctx.beginPath();
-      ctx.arc(board.x, cy, 120, 0, Math.PI * 2);
+      ctx.arc(board.x, cy, 78, 0, Math.PI * 2);
       ctx.fill();
     }
     // Headlight cones and tail glow.
@@ -1349,18 +1354,29 @@ export function createRenderer(canvas) {
       ctx.save();
       ctx.translate(vehicle.x, vehicle.y);
       ctx.rotate(vehicle.angle);
-      const beam = ctx.createLinearGradient(0, 0, 190, 0);
-      beam.addColorStop(0, `rgba(255, 236, 186, ${0.17 * warm})`);
-      beam.addColorStop(0.35, `rgba(255, 220, 160, ${0.07 * warm})`);
+      const beam = ctx.createLinearGradient(0, 0, 210, 0);
+      beam.addColorStop(0, `rgba(255, 244, 206, ${0.09 * warm})`);
+      beam.addColorStop(0.35, `rgba(255, 226, 168, ${0.04 * warm})`);
       beam.addColorStop(1, 'rgba(255, 210, 140, 0)');
       ctx.fillStyle = beam;
       ctx.beginPath();
-      ctx.moveTo(vehicle.length * 0.5, -vehicle.width * 0.35);
-      ctx.lineTo(190, -58);
-      ctx.lineTo(190, 58);
-      ctx.lineTo(vehicle.length * 0.5, vehicle.width * 0.35);
+      ctx.moveTo(vehicle.length * 0.5, -vehicle.width * 0.3);
+      ctx.lineTo(210, -50);
+      ctx.lineTo(210, 50);
+      ctx.lineTo(vehicle.length * 0.5, vehicle.width * 0.3);
       ctx.closePath();
       ctx.fill();
+      // Two hot lamp cores at the nose, bright enough to read at a glance.
+      for (const side of [-1, 1]) {
+        const lamp = ctx.createRadialGradient(vehicle.length * 0.46, side * vehicle.width * 0.24, 0, vehicle.length * 0.46, side * vehicle.width * 0.24, 13);
+        lamp.addColorStop(0, 'rgba(255, 255, 232, 0.85)');
+        lamp.addColorStop(0.45, 'rgba(255, 232, 170, 0.28)');
+        lamp.addColorStop(1, 'rgba(255, 220, 150, 0)');
+        ctx.fillStyle = lamp;
+        ctx.beginPath();
+        ctx.arc(vehicle.length * 0.46, side * vehicle.width * 0.24, 13, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.restore();
     }
     // Sirens bloom.
@@ -1369,20 +1385,20 @@ export function createRenderer(canvas) {
       if (unit.x < view.x0 - 120 || unit.x > view.x1 + 120 || unit.y < view.y0 - 120 || unit.y > view.y1 + 120) continue;
       const red = Math.sin((game.clock * 12 + unit.id) % (Math.PI * 2)) > 0;
       const color = red ? '255, 51, 85' : '61, 123, 255';
-      const halo = ctx.createRadialGradient(unit.x, unit.y, 0, unit.x, unit.y, 104);
-      halo.addColorStop(0, `rgba(${color}, ${0.2 * (0.85 + night * 0.6)})`);
-      halo.addColorStop(0.5, `rgba(${color}, ${0.08 * (0.85 + night * 0.6)})`);
+      const halo = ctx.createRadialGradient(unit.x, unit.y, 0, unit.x, unit.y, 74);
+      halo.addColorStop(0, `rgba(${color}, ${0.24 * (0.85 + night * 0.6)})`);
+      halo.addColorStop(0.5, `rgba(${color}, ${0.09 * (0.85 + night * 0.6)})`);
       halo.addColorStop(1, `rgba(${color}, 0)`);
       ctx.fillStyle = halo;
       ctx.beginPath();
-      ctx.arc(unit.x, unit.y, 104, 0, Math.PI * 2);
+      ctx.arc(unit.x, unit.y, 74, 0, Math.PI * 2);
       ctx.fill();
-      const core = ctx.createRadialGradient(unit.x, unit.y, 0, unit.x, unit.y, 22);
-      core.addColorStop(0, red ? 'rgba(255, 120, 130, 0.35)' : 'rgba(140, 175, 255, 0.35)');
+      const core = ctx.createRadialGradient(unit.x, unit.y, 0, unit.x, unit.y, 26);
+      core.addColorStop(0, red ? 'rgba(255, 140, 150, 0.5)' : 'rgba(150, 185, 255, 0.5)');
       core.addColorStop(1, `rgba(${color}, 0)`);
       ctx.fillStyle = core;
       ctx.beginPath();
-      ctx.arc(unit.x, unit.y, 22, 0, Math.PI * 2);
+      ctx.arc(unit.x, unit.y, 26, 0, Math.PI * 2);
       ctx.fill();
     }
     // Neon shop fronts glow.

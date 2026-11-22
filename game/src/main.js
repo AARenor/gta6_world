@@ -2,22 +2,18 @@
 // two ways out of a night (busted, wasted). ?scene=cover|chase|mission|onfoot stages one of the
 // screenshot tableaux and paints it twice, then raises window.__shotReady for the capture.
 
-import { CITY, SAVE_KEY, STEP, WEAPONS } from './config.js';
-import { createRandom } from './random.js';
 import { createCity } from './city.js';
-import { createTraffic } from './traffic.js';
-import { createPeds } from './pedestrians.js';
+import { createTraffic, createVehicle, collideVehicles, explodeVehicle, createPeds } from './traffic.js';
 import { createPolice } from './police.js';
 import { createMissions } from './missions.js';
+import { createHud, drawBusted, drawPause, drawTitle, drawWasted } from './hud.js';
+import { createRenderer } from './render.js';
+import { createPlayer, createInput, updatePlayer, hurtPlayer } from './player.js';
+import { stageScene } from './scenes.js';
 import { createEffects } from './effects.js';
 import { createAudio } from './audio.js';
-import { createHud } from './hud.js';
-import { createRenderer } from './render.js';
-import { createPlayer, updatePlayer, hurtPlayer } from './player.js';
-import { createInput } from './input.js';
-import { createVehicle, collideVehicles, explodeVehicle } from './vehicles.js';
-import { stageScene } from './scenes.js';
-import { drawBusted, drawPause, drawTitle, drawWasted } from './title.js';
+import { CITY, SAVE_KEY, STEP, WEAPONS } from './config.js';
+import { createRandom } from './random.js';
 
 const canvas = document.getElementById('game');
 const statusEl = document.getElementById('status');

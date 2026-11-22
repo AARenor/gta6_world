@@ -5,7 +5,7 @@
 
 import { CAST, CITY, LANES, STORY } from './config.js';
 import { addMoney, giveWeapon } from './player.js';
-import { createVehicle } from './vehicles.js';
+import { createVehicle } from './traffic.js';
 import { clamp } from './random.js';
 
 export function createMissions(city, rng) {

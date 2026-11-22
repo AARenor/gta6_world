@@ -4,7 +4,7 @@
 // a label the player reads at a glance: job number, objective, next step, named police units with
 // range and state, wanted stars, cash, condition.
 
-import { CAST, CITY, FONT, LOGICAL, PALETTE, RADIO, WEAPONS } from './config.js';
+import { CAST, CITY, CITY_NAME, FONT, LOGICAL, PALETTE, RADIO, TAGLINE, WEAPONS } from './config.js';
 
 const STAR_ANGLES = [];
 for (let k = 0; k < 10; k += 1) {
@@ -78,6 +78,8 @@ export function createHud() {
     banner: null,
     bannerTimer: 0,
     briefing: null,
+    card: null,
+    cardTimer: 0,
     moneyFlash: 0,
     lastMoney: null,
     hintTimer: 0,
@@ -124,6 +126,7 @@ export function createHud() {
     }
     if (state.toastTimer > 0) state.toastTimer -= dt;
     if (state.bannerTimer > 0) state.bannerTimer -= dt;
+    if (state.cardTimer > 0) state.cardTimer -= dt;
     state.hintTimer += dt;
   }
 
@@ -144,6 +147,7 @@ export function createHud() {
     drawVitals(ctx, game);
     drawVehiclePanel(ctx, game);
     drawRadio(ctx, game);
+    drawCard(ctx, game);
     drawDialogue(ctx, game);
     drawPrompt(ctx, game);
     drawToast(ctx, game);
@@ -165,174 +169,204 @@ export function createHud() {
       const text = marker.label || '';
       if (!text) continue;
       ctx.save();
-      ctx.font = `800 20px ${FONT.head}`;
-      const width = ctx.measureText(text).width + 26;
-      ctx.fillStyle = 'rgba(13, 8, 20, 0.72)';
-      roundRect(ctx, p.x - width / 2, p.y - 106, width, 30, 6);
+      ctx.font = `900 34px ${FONT.head}`;
+      const width = ctx.measureText(text).width + 40;
+      ctx.fillStyle = 'rgba(13, 8, 20, 0.8)';
+      roundRect(ctx, p.x - width / 2, p.y - 150, width, 48, 6);
       ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 205, 90, 0.7)';
+      ctx.strokeStyle = 'rgba(255, 205, 90, 0.85)';
+      ctx.lineWidth = 2;
       ctx.stroke();
       ctx.fillStyle = '#ffd34d';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(text, p.x, p.y - 91);
+      ctx.fillText(text, p.x, p.y - 126);
       ctx.restore();
     }
+  }
+
+  /** A job card: the objective set in very large type when a job opens or its stage turns over. */
+  function card(title, stage, objective, reward) {
+    state.card = { title, stage, objective, reward };
+    state.cardTimer = 3.4;
+  }
+
+  function drawCard(ctx, game) {
+    if (!state.card || state.cardTimer <= 0) return;
+    const c = state.card;
+    const alpha = Math.min(1, state.cardTimer * 1.6);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    const w = 1792;
+    const h = 420;
+    const x = 64;
+    const y = 112;
+    ctx.fillStyle = 'rgba(8, 5, 12, 0.55)';
+    roundRect(ctx, x, y, w, h, 12);
+    ctx.fill();
+    panel(ctx, x, y, w, h, '#ff8a3d');
+    ctx.fillStyle = '#ff8a3d';
+    roundRect(ctx, x + 52, y + 34, 300, 58, 6);
+    ctx.fill();
+    label(ctx, c.stage, x + 202, y + 64, 36, '#1a0f18', 'center', 900);
+    label(ctx, c.reward, x + w - 56, y + 64, 52, '#8bf0b5', 'right', 900, FONT.narrow);
+    label(ctx, c.title, x + 54, y + 186, 116, '#fff2df', 'left', 900);
+    label(ctx, c.objective, x + 56, y + 330, 96, '#ffd34d', 'left', 900);
+    ctx.restore();
   }
 
   function drawJobPanel(ctx, game) {
     const mission = game.missions.hudState();
     const x = 34;
-    const y = 28;
-    const w = 648;
-    let height = 168;
-    if (mission) height = mission.waiting ? 132 : mission.timer > 0 ? 196 : 178;
+    const y = 26;
+    const w = 1000;
+    let height = 214;
+    if (mission) height = mission.waiting ? 176 : mission.timer > 0 ? 252 : 232;
     panel(ctx, x, y, w, height, mission ? '#ff8a3d' : '#6b6270');
     if (!mission) {
-      label(ctx, 'NO JOB ACTIVE', x + 26, y + 38, 26, '#ffd34d');
-      label(ctx, 'Roll the city and wait for a call', x + 26, y + 76, 23, PALETTE.muted, 'left', 500, FONT.body);
+      label(ctx, 'NO JOB ACTIVE', x + 30, y + 48, 42, '#ffd34d');
+      label(ctx, 'Roll the city and wait for a call', x + 30, y + 104, 30, PALETTE.muted, 'left', 500, FONT.body);
       return;
     }
     // Header: job number chip and title.
     ctx.fillStyle = '#ff8a3d';
-    roundRect(ctx, x + 20, y + 18, 118, 36, 5);
+    roundRect(ctx, x + 24, y + 20, 168, 50, 6);
     ctx.fill();
-    label(ctx, `JOB ${mission.num}/${mission.total}`, x + 79, y + 37, 22, '#1a0f18', 'center', 900);
-    label(ctx, mission.title, x + 154, y + 37, 30, PALETTE.text, 'left', 900);
+    label(ctx, `JOB ${mission.num}/${mission.total}`, x + 108, y + 46, 28, '#1a0f18', 'center', 900);
+    label(ctx, mission.title, x + 208, y + 46, 44, PALETTE.text, 'left', 900);
     if (mission.timer > 0) {
       ctx.fillStyle = 'rgba(255, 77, 94, 0.16)';
-      roundRect(ctx, x + w - 132, y + 16, 112, 40, 6);
+      roundRect(ctx, x + w - 168, y + 16, 144, 58, 6);
       ctx.fill();
-      label(ctx, `${String(Math.floor(mission.timer / 60)).padStart(2, '0')}:${String(Math.floor(mission.timer % 60)).padStart(2, '0')}`, x + w - 76, y + 37, 28, '#ff6a7a', 'center', 800, FONT.mono);
+      label(ctx, `${String(Math.floor(mission.timer / 60)).padStart(2, '0')}:${String(Math.floor(mission.timer % 60)).padStart(2, '0')}`, x + w - 96, y + 46, 38, '#ff6a7a', 'center', 800, FONT.mono);
     }
     // Stage pips.
     const stages = mission.stages ?? 3;
-    const pipY = y + 72;
+    const pipY = y + 92;
     for (let k = 0; k < stages; k += 1) {
-      const px = x + 24 + k * 46;
+      const px = x + 28 + k * 58;
       ctx.fillStyle = k < (mission.stage || 1) ? '#ff8a3d' : 'rgba(255, 255, 255, 0.16)';
-      roundRect(ctx, px, pipY, 38, 7, 3);
+      roundRect(ctx, px, pipY, 48, 10, 4);
       ctx.fill();
     }
-    label(ctx, mission.stage > 0 ? `STAGE ${mission.stage}/${stages}` : 'READY', x + 24 + stages * 46, pipY + 3, 19, PALETTE.muted, 'left', 700, FONT.narrow);
-    if (mission.progress) label(ctx, mission.progress, x + w - 26, pipY + 3, 24, '#ffd34d', 'right', 800, FONT.mono);
+    label(ctx, mission.stage > 0 ? `STAGE ${mission.stage}/${stages}` : 'READY', x + 28 + stages * 58, pipY + 5, 26, PALETTE.muted, 'left', 700, FONT.narrow);
+    if (mission.progress) label(ctx, mission.progress, x + w - 28, pipY + 5, 30, '#ffd34d', 'right', 800, FONT.mono);
+    else label(ctx, `REWARD ${moneyText(mission.reward)}`, x + w - 28, pipY + 5, 26, PALETTE.money, 'right', 800, FONT.narrow);
     // Objective and next.
-    label(ctx, mission.objective, x + 24, y + 107, 25, '#fff6e6', 'left', 700, FONT.body);
+    label(ctx, mission.objective, x + 28, y + 140, 34, '#fff6e6', 'left', 700, FONT.body);
     ctx.fillStyle = 'rgba(255, 138, 61, 0.9)';
-    roundRect(ctx, x + 24, y + 129, 62, 22, 4);
+    roundRect(ctx, x + 28, y + 166, 92, 34, 4);
     ctx.fill();
-    label(ctx, 'NEXT', x + 55, y + 141, 17, '#1a0f18', 'center', 900);
-    label(ctx, mission.next, x + 98, y + 140, 21, PALETTE.muted, 'left', 600, FONT.body);
-    label(ctx, `REWARD ${moneyText(mission.reward)}`, x + w - 24, y + 140, 21, PALETTE.money, 'right', 800, FONT.narrow);
+    label(ctx, 'NEXT', x + 74, y + 184, 22, '#1a0f18', 'center', 900);
+    label(ctx, mission.next, x + 136, y + 184, 26, PALETTE.muted, 'left', 600, FONT.body);
   }
 
   function drawMoneyStars(ctx, game) {
-    const right = 1886;
-    const y = 60;
+    const right = 1880;
+    const y = 94;
     ctx.save();
     ctx.textAlign = 'right';
-    ctx.font = `italic 900 68px ${FONT.head}`;
+    ctx.font = `italic 900 104px ${FONT.head}`;
     ctx.fillStyle = 'rgba(12, 7, 18, 0.55)';
-    ctx.fillText(moneyText(game.player.money), right + 4, y + 5);
+    ctx.fillText(moneyText(game.player.money), right + 5, y + 6);
     ctx.fillStyle = state.moneyFlash > 0.05 ? '#b8ffcf' : PALETTE.money;
     ctx.fillText(moneyText(game.player.money), right, y);
     ctx.restore();
-    // Wanted stars.
+    // Wanted stars, lit and large.
     const stars = game.police?.stars ?? 0;
     for (let k = 0; k < 5; k += 1) {
-      const sx = right - 24 - k * 52;
-      const sy = y + 78;
-      starPath(ctx, sx, sy, 23);
+      const sx = right - 36 - k * 82;
+      const sy = y + 88;
+      starPath(ctx, sx, sy, 38);
       if (k < stars) {
         ctx.fillStyle = PALETTE.wanted;
-        ctx.shadowColor = 'rgba(255, 211, 77, 0.8)';
-        ctx.shadowBlur = 18;
+        ctx.shadowColor = 'rgba(255, 211, 77, 0.9)';
+        ctx.shadowBlur = 26;
         ctx.fill();
         ctx.shadowBlur = 0;
-        ctx.strokeStyle = 'rgba(80, 40, 10, 0.5)';
-        ctx.lineWidth = 1.4;
+        ctx.strokeStyle = 'rgba(80, 40, 10, 0.55)';
+        ctx.lineWidth = 2.4;
         ctx.stroke();
       } else {
         ctx.fillStyle = 'rgba(255, 236, 200, 0.13)';
         ctx.fill();
         ctx.strokeStyle = 'rgba(255, 236, 200, 0.32)';
-        ctx.lineWidth = 1.6;
+        ctx.lineWidth = 2.4;
         ctx.stroke();
       }
     }
     const district = game.district ?? 'VELVET SQUARE';
-    label(ctx, clockText(game.hour ?? 18.7), right - 296, y + 78, 26, '#ffd891', 'right', 800, FONT.mono);
-    label(ctx, district, right, y + 122, 21, 'rgba(255, 255, 255, 0.66)', 'right', 700, FONT.narrow);
+    label(ctx, clockText(game.hour ?? 18.7), right - 470, y, 40, '#ffd891', 'right', 800, FONT.mono);
+    label(ctx, district, right, y + 140, 28, 'rgba(255, 255, 255, 0.72)', 'right', 800, FONT.narrow);
     const police = game.police;
     if (police && police.stars > 0) {
       const text = police.status === 'HIDDEN' ? 'SEARCHING — STAY OUT OF SIGHT' : police.lastCrime ? `WANTED · ${police.lastCrime.toUpperCase()}` : 'WANTED';
       const color = police.status === 'HIDDEN' ? '#26efd4' : '#ff6a7a';
-      label(ctx, text, right, y + 148, 18, color, 'right', 800, FONT.narrow);
+      label(ctx, text, right, y + 178, 26, color, 'right', 800, FONT.narrow);
     }
   }
 
   function drawDispatch(ctx, game) {
     const rows = game.police?.dispatch(game) ?? [];
     if (rows.length === 0) return;
-    const w = 512;
-    const x = 1886 - w;
-    const y = 252;
-    const h = 62 + rows.length * 40;
+    const w = 640;
+    const x = 1880 - w;
+    const y = 312;
+    const h = 78 + rows.length * 54;
     panel(ctx, x, y, w, h, '#ff3355');
-    label(ctx, 'VCPD DISPATCH', x + 22, y + 28, 22, '#ff8f9a', 'left', 900);
-    const units = game.police?.units.filter((u) => u.police).length ?? 0;
-    label(ctx, `${rows.length + (game.police?.blocks?.length ?? 0)} UNITS · ${'★'.repeat(game.police?.stars ?? 0)}`, x + w - 20, y + 28, 18, 'rgba(255,255,255,0.6)', 'right', 700, FONT.narrow);
+    label(ctx, 'VCPD DISPATCH', x + 24, y + 36, 30, '#ff8f9a', 'left', 900);
+    label(ctx, `${rows.length + (game.police?.blocks?.length ?? 0)} UNITS · ${'★'.repeat(game.police?.stars ?? 0)}`, x + w - 22, y + 36, 24, 'rgba(255,255,255,0.62)', 'right', 700, FONT.narrow);
     const colors = {
       RAMMING: '#ff4d5e', ROADBLOCK: '#ffc247', FLANKING: '#26efd4', SPOTLIGHT: '#9d6bff',
       'CLOSING IN': '#ff8a3d', PURSUING: '#b9a9b7', DISABLED: '#6b6270',
     };
-    let rowY = y + 58;
+    let rowY = y + 74;
     for (const row of rows) {
       if (row.kind === 'air') {
         ctx.fillStyle = 'rgba(157, 107, 255, 0.16)';
-        roundRect(ctx, x + 12, rowY - 14, w - 24, 32, 4);
+        roundRect(ctx, x + 12, rowY - 19, w - 24, 42, 4);
         ctx.fill();
       }
-      label(ctx, row.name, x + 22, rowY + 2, 21, row.kind === 'air' ? '#c9b4ff' : '#f1e7dd', 'left', 800, FONT.mono);
-      label(ctx, distanceText(row.dist), x + 250, rowY + 2, 19, 'rgba(255,255,255,0.72)', 'left', 700, FONT.mono);
+      label(ctx, row.name, x + 24, rowY + 2, 28, row.kind === 'air' ? '#c9b4ff' : '#f1e7dd', 'left', 800, FONT.mono);
+      label(ctx, distanceText(row.dist), x + 296, rowY + 2, 26, 'rgba(255,255,255,0.74)', 'left', 700, FONT.mono);
       const status = row.status;
       const color = colors[status] ?? '#b9a9b7';
       ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
-      roundRect(ctx, x + w - 170, rowY - 13, 152, 28, 4);
+      roundRect(ctx, x + w - 224, rowY - 18, 202, 38, 4);
       ctx.fill();
-      label(ctx, status, x + w - 94, rowY + 1, 17, color, 'center', 900, FONT.narrow);
-      rowY += 40;
+      label(ctx, status, x + w - 123, rowY + 1, 23, color, 'center', 900, FONT.narrow);
+      rowY += 54;
     }
   }
 
   function drawMinimap(ctx, game) {
-    const radius = 150;
-    const cx = 206;
-    const cy = 806;
+    const radius = 176;
+    const cx = 246;
+    const cy = 744;
     const player = game.player;
     const angle = player.inCar ? player.inCar.angle : player.angle;
     ctx.save();
     // Outer bezel.
     ctx.beginPath();
-    ctx.arc(cx, cy, radius + 12, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(13, 8, 20, 0.9)';
+    ctx.arc(cx, cy, radius + 14, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(13, 8, 20, 0.92)';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 196, 120, 0.5)';
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(255, 196, 120, 0.62)';
+    ctx.lineWidth = 5;
     ctx.stroke();
     ctx.beginPath();
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.clip();
     // Road field.
-    ctx.fillStyle = '#171022';
+    ctx.fillStyle = '#1b1126';
     ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
-    const scale = 0.084;
+    const scale = 0.11;
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(-angle - Math.PI / 2);
     ctx.scale(scale, scale);
     ctx.translate(-player.x, -player.y);
-    const span = 150 / scale;
+    const span = radius / scale;
     const i0 = Math.max(0, Math.floor((player.x - span) / CITY.pitch));
     const i1 = Math.min(CITY.blocks - 1, Math.floor((player.x + span) / CITY.pitch));
     const j0 = Math.max(0, Math.floor((player.y - span) / CITY.pitch));
@@ -341,16 +375,16 @@ export function createHud() {
       for (let i = i0; i <= i1; i += 1) {
         const bx = i * CITY.pitch + CITY.half;
         const by = j * CITY.pitch + CITY.half;
-        ctx.fillStyle = (i + j) % 2 === 0 ? '#705c82' : '#675374';
+        ctx.fillStyle = (i + j) % 2 === 0 ? '#4a3358' : '#402c4d';
         ctx.fillRect(bx + 18, by + 18, CITY.pitch - CITY.road - 36, CITY.pitch - CITY.road - 36);
-        ctx.strokeStyle = 'rgba(255, 214, 170, 0.14)';
-        ctx.lineWidth = 6;
+        ctx.strokeStyle = 'rgba(255, 224, 186, 0.2)';
+        ctx.lineWidth = 7;
         ctx.strokeRect(bx + 18, by + 18, CITY.pitch - CITY.road - 36, CITY.pitch - CITY.road - 36);
       }
     }
     // The road grid, bright enough to read as streets.
-    ctx.strokeStyle = 'rgba(255, 226, 190, 0.16)';
-    ctx.lineWidth = 8;
+    ctx.strokeStyle = 'rgba(255, 236, 208, 0.55)';
+    ctx.lineWidth = 12;
     for (let i = i0; i <= i1 + 1; i += 1) {
       ctx.beginPath();
       ctx.moveTo(i * CITY.pitch, (j0) * CITY.pitch);
@@ -363,19 +397,34 @@ export function createHud() {
       ctx.lineTo((i1 + 1) * CITY.pitch, j * CITY.pitch);
       ctx.stroke();
     }
+    // The route to the live job marker, drawn like a sat-nav line.
+    for (const marker of game.missions.markerList()) {
+      ctx.save();
+      ctx.setLineDash([26, 18]);
+      ctx.strokeStyle = 'rgba(38, 239, 212, 0.95)';
+      ctx.lineWidth = 16;
+      ctx.beginPath();
+      ctx.moveTo(player.x, player.y);
+      ctx.lineTo(marker.x, marker.y);
+      ctx.stroke();
+      ctx.restore();
+    }
     // Mission marker.
     for (const marker of game.missions.markerList()) {
       ctx.fillStyle = marker.kind === 'target' ? '#ff4d5e' : '#ffd34d';
+      ctx.strokeStyle = 'rgba(20, 10, 26, 0.8)';
+      ctx.lineWidth = 6;
       ctx.save();
       ctx.translate(marker.x, marker.y);
       ctx.rotate(angle + Math.PI / 2);
       ctx.beginPath();
-      ctx.moveTo(0, -26);
-      ctx.lineTo(18, 0);
-      ctx.lineTo(0, 26);
-      ctx.lineTo(-18, 0);
+      ctx.moveTo(0, -58);
+      ctx.lineTo(40, 0);
+      ctx.lineTo(0, 58);
+      ctx.lineTo(-40, 0);
       ctx.closePath();
       ctx.fill();
+      ctx.stroke();
       ctx.restore();
     }
     // Cars and police.
@@ -384,33 +433,32 @@ export function createHud() {
       const flash = Math.sin((unit.sirenPhase ?? 0) * Math.PI * 2) > 0;
       ctx.fillStyle = unit.wrecked ? '#5d5566' : flash ? '#ff3355' : '#3d7bff';
       ctx.beginPath();
-      ctx.arc(unit.x, unit.y, 20, 0, Math.PI * 2);
+      ctx.arc(unit.x, unit.y, 52, 0, Math.PI * 2);
       ctx.fill();
     }
     for (const car of game.traffic?.cars ?? []) {
       ctx.fillStyle = '#f3e7d2';
-      ctx.fillRect(car.x - 15, car.y - 15, 30, 30);
+      ctx.fillRect(car.x - 34, car.y - 34, 68, 68);
     }
     if (game.police?.chopper) {
       const ch = game.police.chopper;
       ctx.fillStyle = '#c9b4ff';
       ctx.beginPath();
-      ctx.arc(ch.x, ch.y, 20, 0, Math.PI * 2);
+      ctx.arc(ch.x, ch.y, 54, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
     // Player arrow stays upright at the centre.
-    ctx.restore();
     ctx.save();
     ctx.translate(cx, cy);
     ctx.fillStyle = '#ffffff';
     ctx.strokeStyle = 'rgba(16, 10, 24, 0.9)';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.moveTo(0, -15);
-    ctx.lineTo(11, 12);
-    ctx.lineTo(0, 7);
-    ctx.lineTo(-11, 12);
+    ctx.moveTo(0, -24);
+    ctx.lineTo(18, 19);
+    ctx.lineTo(0, 11);
+    ctx.lineTo(-18, 19);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
@@ -419,44 +467,45 @@ export function createHud() {
     const nx = cx + Math.cos(northAngle) * (radius - 2);
     const ny = cy + Math.sin(northAngle) * (radius - 2);
     ctx.beginPath();
-    ctx.arc(nx, ny, 15, 0, Math.PI * 2);
+    ctx.arc(nx, ny, 21, 0, Math.PI * 2);
     ctx.fillStyle = '#1a1220';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 211, 77, 0.8)';
+    ctx.strokeStyle = 'rgba(255, 211, 77, 0.85)';
+    ctx.lineWidth = 2;
     ctx.stroke();
-    label(ctx, 'N', nx, ny + 1, 17, '#ffd34d', 'center', 900);
+    label(ctx, 'N', nx, ny + 1, 24, '#ffd34d', 'center', 900);
     // Ring ticks.
     for (let k = 0; k < 12; k += 1) {
       const a = (k / 12) * Math.PI * 2 + northAngle;
       ctx.beginPath();
       ctx.moveTo(cx + Math.cos(a) * (radius + 2), cy + Math.sin(a) * (radius + 2));
-      ctx.lineTo(cx + Math.cos(a) * (radius + 10), cy + Math.sin(a) * (radius + 10));
-      ctx.strokeStyle = 'rgba(255, 220, 180, 0.34)';
-      ctx.lineWidth = 2;
+      ctx.lineTo(cx + Math.cos(a) * (radius + 12), cy + Math.sin(a) * (radius + 12));
+      ctx.strokeStyle = 'rgba(255, 220, 180, 0.42)';
+      ctx.lineWidth = 3;
       ctx.stroke();
     }
     ctx.restore();
-    label(ctx, (game.district ?? 'VELVET SQUARE'), cx, cy - radius - 28, 20, '#ffd891', 'center', 900, FONT.narrow);
-    label(ctx, 'VESPER CITY', cx, cy + radius + 30, 16, 'rgba(255,255,255,0.4)', 'center', 700, FONT.narrow);
+    ctx.restore();
+    label(ctx, (game.district ?? 'VELVET SQUARE').toUpperCase(), cx, cy - radius - 30, 30, '#ffd891', 'center', 900, FONT.narrow);
   }
 
   function drawVitals(ctx, game) {
-    const x = 54;
-    const y = 992;
-    const w = 304;
+    const x = 74;
+    const y = 984;
+    const w = 340;
     const p = game.player;
-    ctx.fillStyle = 'rgba(13, 8, 20, 0.72)';
-    roundRect(ctx, x - 14, y - 14, w + 28, 68, 8);
+    ctx.fillStyle = 'rgba(13, 8, 20, 0.78)';
+    roundRect(ctx, x - 16, y - 16, w + 32, 84, 8);
     ctx.fill();
-    drawBar(ctx, x, y, w, 16, p.health / 100, PALETTE.health, 'HEALTH', `${Math.round(p.health)}`);
-    drawBar(ctx, x, y + 28, w, 12, p.armour / 100, PALETTE.armour, 'ARMOUR', `${Math.round(p.armour)}`);
+    drawBar(ctx, x, y, w, 26, p.health / 100, PALETTE.health, 'HEALTH', `${Math.round(p.health)}`);
+    drawBar(ctx, x, y + 38, w, 18, p.armour / 100, PALETTE.armour, 'ARMOUR', `${Math.round(p.armour)}`);
     if (game.respect !== undefined) {
-      label(ctx, `RESPECT ${game.player.respect}`, x + w + 22, y + 8, 19, 'rgba(255, 211, 120, 0.8)', 'left', 800, FONT.narrow);
+      label(ctx, `RESPECT ${game.player.respect}`, x + w + 26, y + 10, 24, 'rgba(255, 211, 120, 0.85)', 'left', 800, FONT.narrow);
     }
   }
 
   function drawBar(ctx, x, y, w, h, value, color, name, valueText) {
-    ctx.fillStyle = 'rgba(13, 8, 20, 0.86)';
+    ctx.fillStyle = 'rgba(13, 8, 20, 0.9)';
     roundRect(ctx, x, y, w, h, h * 0.5);
     ctx.fill();
     const clamped = Math.max(0, Math.min(1, value));
@@ -465,52 +514,52 @@ export function createHud() {
       roundRect(ctx, x + 2, y + 2, Math.max(3, (w - 4) * clamped), h - 4, (h - 4) * 0.5);
       ctx.fill();
     }
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.24)';
+    ctx.lineWidth = 2;
     roundRect(ctx, x, y, w, h, h * 0.5);
     ctx.stroke();
-    label(ctx, name, x + 12, y + h + 15, 16, 'rgba(255,255,255,0.68)', 'left', 800, FONT.narrow);
-    label(ctx, valueText, x + w - 10, y + h + 15, 17, '#f7f1e6', 'right', 800, FONT.mono);
+    label(ctx, name, x + 14, y + h + 17, 22, 'rgba(255,255,255,0.8)', 'left', 800, FONT.narrow);
+    label(ctx, valueText, x + w - 10, y + h + 17, 24, '#f7f1e6', 'right', 800, FONT.mono);
   }
 
   function drawVehiclePanel(ctx, game) {
     const car = game.player.inCar;
-    const right = 1886;
+    const right = 1880;
     if (car) {
       const mph = Math.round(Math.abs(car.speed) * 0.22);
       ctx.save();
       ctx.textAlign = 'right';
-      ctx.font = `italic 900 92px ${FONT.head}`;
+      ctx.font = `italic 900 132px ${FONT.head}`;
       ctx.fillStyle = 'rgba(10, 6, 16, 0.55)';
-      ctx.fillText(String(mph), right + 5, 1000 + 6);
+      ctx.fillText(String(mph), right + 6, 1006);
       ctx.fillStyle = '#fff4df';
       ctx.fillText(String(mph), right, 1000);
       ctx.restore();
-      label(ctx, 'MPH', right - 6, 948, 22, '#ff8a3d', 'right', 900, FONT.narrow);
+      label(ctx, 'MPH', right - 8, 936, 30, '#ff8a3d', 'right', 900, FONT.narrow);
       const gear = car.speed < -6 ? 'R' : Math.abs(car.speed) < 6 ? 'N' : 'D';
-      label(ctx, gear, right - 150, 990, 30, 'rgba(255,255,255,0.72)', 'right', 900, FONT.mono);
-      label(ctx, car.name, right, 924, 24, '#ffd891', 'right', 900, FONT.head);
+      label(ctx, gear, right - 236, 986, 42, 'rgba(255,255,255,0.78)', 'right', 900, FONT.mono);
+      label(ctx, car.name, right, 896, 32, '#ffd891', 'right', 900, FONT.head);
       // Condition bar.
-      const w = 250;
+      const w = 300;
       const x = right - w;
-      const y = 1016;
-      ctx.fillStyle = 'rgba(13, 8, 20, 0.86)';
-      roundRect(ctx, x, y, w, 11, 5);
+      const y = 1014;
+      ctx.fillStyle = 'rgba(13, 8, 20, 0.9)';
+      roundRect(ctx, x, y, w, 15, 7);
       ctx.fill();
       ctx.fillStyle = car.health > 55 ? '#54e08a' : car.health > 25 ? '#ffc247' : '#ff4d5e';
-      roundRect(ctx, x + 1.5, y + 1.5, Math.max(2, (w - 3) * Math.max(0, car.health / 100)), 8, 4);
+      roundRect(ctx, x + 2, y + 2, Math.max(2, (w - 4) * Math.max(0, car.health / 100)), 11, 5);
       ctx.fill();
-      label(ctx, 'CONDITION', x, y + 26, 16, 'rgba(255,255,255,0.62)', 'left', 800, FONT.narrow);
-      label(ctx, `${Math.round(car.health)}%`, right, y + 26, 16, '#f7f1e6', 'right', 800, FONT.mono);
+      label(ctx, 'CONDITION', x, y + 32, 22, 'rgba(255,255,255,0.7)', 'left', 800, FONT.narrow);
+      label(ctx, `${Math.round(car.health)}%`, right, y + 32, 22, '#f7f1e6', 'right', 800, FONT.mono);
       if (car.indicator !== 0) {
         const blink = Math.sin((game.clock ?? 0) * 12) > 0;
         if (blink) {
           ctx.fillStyle = '#ffc247';
-          const ix = car.indicator < 0 ? right - 330 : right - 300;
+          const ix = car.indicator < 0 ? right - 400 : right - 368;
           ctx.beginPath();
-          ctx.moveTo(ix, 924);
-          ctx.lineTo(ix + 14, 916);
-          ctx.lineTo(ix + 14, 932);
+          ctx.moveTo(ix, 896);
+          ctx.lineTo(ix + 18, 886);
+          ctx.lineTo(ix + 18, 906);
           ctx.closePath();
           ctx.fill();
         }
@@ -518,38 +567,38 @@ export function createHud() {
     } else {
       const weapon = WEAPONS[game.player.weapon];
       const ammo = game.player.ammo[game.player.weapon];
-      panel(ctx, right - 330, 900, 330, 146, '#26efd4');
-      label(ctx, weapon.name, right - 22, 928, 24, '#d8fff8', 'right', 900);
+      panel(ctx, right - 384, 872, 384, 176, '#26efd4');
+      label(ctx, weapon.name, right - 24, 906, 30, '#d8fff8', 'right', 900);
       ctx.save();
-      ctx.font = `italic 900 58px ${FONT.head}`;
+      ctx.font = `italic 900 76px ${FONT.head}`;
       ctx.fillStyle = '#fff4df';
       ctx.textAlign = 'right';
-      ctx.fillText(String(ammo.clip), right - 232, 990);
-      ctx.font = `700 28px ${FONT.mono}`;
-      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.fillText(String(ammo.clip), right - 272, 986);
+      ctx.font = `700 36px ${FONT.mono}`;
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
       ctx.textAlign = 'left';
-      ctx.fillText(`/ ${ammo.reserve}`, right - 222, 996);
+      ctx.fillText(`/ ${ammo.reserve}`, right - 258, 992);
       ctx.restore();
-      label(ctx, 'AMMO', right - 22, 992, 18, '#26efd4', 'right', 800, FONT.narrow);
+      label(ctx, 'AMMO', right - 24, 986, 24, '#26efd4', 'right', 800, FONT.narrow);
       // Weapon slots.
-      let px = right - 22;
+      let px = right - 26;
       for (let index = game.player.unlocked.length - 1; index >= 0; index -= 1) {
         const id = game.player.unlocked[index];
         const unlocked = WEAPONS[id];
         const active = id === game.player.weapon;
-        ctx.fillStyle = active ? 'rgba(38, 239, 212, 0.22)' : 'rgba(255,255,255,0.06)';
-        roundRect(ctx, px - 46, 1014, 42, 24, 4);
+        ctx.fillStyle = active ? 'rgba(38, 239, 212, 0.24)' : 'rgba(255,255,255,0.07)';
+        roundRect(ctx, px - 60, 1012, 56, 30, 4);
         ctx.fill();
-        label(ctx, unlocked.tag, px - 25, 1027, 16, active ? '#26efd4' : 'rgba(255,255,255,0.42)', 'center', 900, FONT.narrow);
-        px -= 50;
+        label(ctx, unlocked.tag, px - 32, 1028, 20, active ? '#26efd4' : 'rgba(255,255,255,0.45)', 'center', 900, FONT.narrow);
+        px -= 64;
       }
     }
   }
 
   function drawRadio(ctx, game) {
     const radio = RADIO[game.radioIndex ?? 0];
-    label(ctx, `${radio.dial} · ${radio.name}`, 1886, 872, 17, 'rgba(255, 220, 180, 0.6)', 'right', 700, FONT.narrow);
-    label(ctx, radio.tag.toUpperCase(), 1886, 894, 14, 'rgba(255, 255, 255, 0.36)', 'right', 700, FONT.narrow);
+    label(ctx, `${radio.dial} · ${radio.name}`, 1880, 812, 24, 'rgba(255, 220, 180, 0.72)', 'right', 700, FONT.narrow);
+    label(ctx, radio.tag.toUpperCase(), 1880, 840, 18, 'rgba(255, 255, 255, 0.44)', 'right', 700, FONT.narrow);
   }
 
   function drawDialogue(ctx, game) {
@@ -559,41 +608,45 @@ export function createHud() {
     }
     const d = state.dialogue;
     const cast = CAST[d.speaker] ?? CAST.mara;
-    const w = 760;
-    const h = 122;
-    const x = 960 - w / 2;
-    const y = 932;
+    const w = 1060;
+    const h = 178;
+    const x = 430;
+    const y = 862;
     panel(ctx, x, y, w, h, '#ff8a3d');
     // Portrait.
-    const px = x + 62;
-    const py = y + 61;
+    const px = x + 82;
+    const py = y + 89;
     ctx.save();
     ctx.beginPath();
-    ctx.arc(px, py, 40, 0, Math.PI * 2);
+    ctx.arc(px, py, 60, 0, Math.PI * 2);
     ctx.fillStyle = cast.shirt;
     ctx.fill();
     ctx.clip();
     ctx.fillStyle = cast.skin;
     ctx.beginPath();
-    ctx.arc(px, py - 6, 19, 0, Math.PI * 2);
+    ctx.arc(px, py - 9, 29, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = 'rgba(20, 14, 26, 0.55)';
     ctx.beginPath();
-    ctx.ellipse(px, py - 18, 22, 12, 0, 0, Math.PI * 2);
+    ctx.ellipse(px, py - 27, 33, 18, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = cast.skin;
     ctx.beginPath();
-    ctx.ellipse(px, py + 44, 34, 26, 0, 0, Math.PI * 2);
+    ctx.ellipse(px, py + 66, 51, 39, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-    ctx.strokeStyle = 'rgba(255, 196, 120, 0.6)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(255, 196, 120, 0.7)';
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(px, py, 40, 0, Math.PI * 2);
+    ctx.arc(px, py, 60, 0, Math.PI * 2);
     ctx.stroke();
-    label(ctx, cast.name, x + 122, y + 36, 24, '#ffb066', 'left', 900);
-    label(ctx, cast.role.toUpperCase(), x + 122 + ctx.measureText(cast.name).width + 60, y + 37, 15, 'rgba(255,255,255,0.45)', 'left', 700, FONT.narrow);
-    drawWrapped(ctx, d.text, x + 122, y + 72, w - 150, 27, '#f7f1e6', 2);
+    label(ctx, cast.name, x + 164, y + 48, 40, '#ffb066', 'left', 900);
+    ctx.save();
+    ctx.font = `900 40px ${FONT.head}`;
+    const nameWidth = ctx.measureText(cast.name).width;
+    ctx.restore();
+    label(ctx, cast.role.toUpperCase(), x + 164 + nameWidth + 76, y + 49, 22, 'rgba(255,255,255,0.5)', 'left', 700, FONT.narrow);
+    drawWrapped(ctx, d.text, x + 164, y + 104, w - 200, 50, '#f7f1e6', 2);
   }
 
   function drawWrapped(ctx, text, x, y, maxWidth, lineHeight, color, maxLines = 2) {
@@ -627,40 +680,58 @@ export function createHud() {
       ['SPACE', 'HANDBRAKE'],
       ['R', 'RELOAD'],
     ];
-    const w = hints.length * 152;
+    const w = hints.length * 196;
     let x = 960 - w / 2;
-    const y = 1018;
-    ctx.fillStyle = 'rgba(13, 8, 20, 0.66)';
-    roundRect(ctx, 960 - w / 2 - 18, y - 24, w + 36, 48, 8);
+    const y = 1026;
+    ctx.fillStyle = 'rgba(13, 8, 20, 0.7)';
+    roundRect(ctx, 960 - w / 2 - 20, y - 30, w + 40, 60, 8);
     ctx.fill();
     for (const [key, action] of hints) {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.14)';
-      roundRect(ctx, x, y - 15, Math.max(38, key.length * 12 + 12), 30, 4);
+      const boxW = Math.max(52, key.length * 16 + 18);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+      roundRect(ctx, x, y - 20, boxW, 40, 4);
       ctx.fill();
-      label(ctx, key, x + Math.max(38, key.length * 12 + 12) / 2, y, 15, '#ffe8c2', 'center', 800, FONT.narrow);
-      label(ctx, action, x + Math.max(38, key.length * 12 + 12) + 8, y, 13, 'rgba(255,255,255,0.5)', 'left', 700, FONT.narrow);
-      x += 152;
+      label(ctx, key, x + boxW / 2, y + 1, 22, '#ffe8c2', 'center', 800, FONT.narrow);
+      label(ctx, action, x + boxW + 10, y + 1, 18, 'rgba(255,255,255,0.58)', 'left', 700, FONT.narrow);
+      x += 196;
     }
   }
 
   function drawPrompt(ctx, game) {
     const job = game.missions.jobs.find((item) => item.prompt);
-    if (!job) return;
-    const cast = CAST[job.giver];
-    const text = `[ E ]  TALK TO ${cast.name}`;
+    let text = null;
+    if (job) text = `[ E ]  TALK TO ${CAST[job.giver].name}`;
+    else if (!game.player.inCar) {
+      // On foot beside a car: name the car you would take. The nearest one wins, unless the
+      // player is standing on a live job marker, where the job's own prompt takes over.
+      const onObjective = game.missions.markerList().some(
+        (marker) => Math.hypot(marker.x - game.player.x, marker.y - game.player.y) < 70,
+      );
+      let near = null;
+      let best = 78;
+      if (!onObjective) {
+        for (const car of game.vehicles) {
+          if (car.wrecked || car.parked) continue;
+          const d = Math.hypot(car.x - game.player.x, car.y - game.player.y);
+          if (d < best) { best = d; near = car; }
+        }
+      }
+      if (near) text = `[ E ]  HIJACK THE ${near.name}`;
+    }
+    if (!text) return;
     ctx.save();
-    ctx.font = `900 24px ${FONT.head}`;
-    const width = ctx.measureText(text).width + 46;
-    ctx.fillStyle = 'rgba(13, 8, 20, 0.9)';
-    roundRect(ctx, 960 - width / 2, 840, width, 48, 8);
+    ctx.font = `900 40px ${FONT.head}`;
+    const width = ctx.measureText(text).width + 64;
+    ctx.fillStyle = 'rgba(13, 8, 20, 0.92)';
+    roundRect(ctx, 960 - width / 2, 782, width, 74, 8);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 211, 77, 0.8)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(255, 211, 77, 0.9)';
+    ctx.lineWidth = 3;
     ctx.stroke();
     ctx.fillStyle = '#ffd34d';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(text, 960, 865);
+    ctx.fillText(text, 960, 822);
     ctx.restore();
   }
 
@@ -806,8 +877,289 @@ export function createHud() {
   }
 
   return {
-    state, say, toast, banner, showBriefing, hideBriefing, update, draw,
+    state, say, toast, banner, card, showBriefing, hideBriefing, update, draw,
   };
 }
 
 const CONFIG_TRAVEL = 1;
+
+// --- The screens around the game: the title (with its own sunset-to-night sky over the city
+// skyline), the pause card, and the two ways a night can end — busted or wasted. Drawn on the same
+// 1920x1080 logical grid as the HUD, over a still frame of the live city.
+
+function roundRectCard(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function skyline(ctx, w, h) {
+  const g = ctx.createLinearGradient(0, 0, 0, h * 0.5);
+  g.addColorStop(0, '#2a1745');
+  g.addColorStop(0.35, '#7b2c6a');
+  g.addColorStop(0.62, '#e0506d');
+  g.addColorStop(0.82, '#ff9a52');
+  g.addColorStop(1, '#ffd08a');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h * 0.5);
+  // Sun.
+  const sun = ctx.createRadialGradient(w * 0.63, h * 0.36, 10, w * 0.63, h * 0.36, h * 0.22);
+  sun.addColorStop(0, 'rgba(255, 240, 190, 0.95)');
+  sun.addColorStop(0.35, 'rgba(255, 190, 110, 0.55)');
+  sun.addColorStop(1, 'rgba(255, 130, 90, 0)');
+  ctx.fillStyle = sun;
+  ctx.fillRect(0, 0, w, h * 0.6);
+  ctx.fillStyle = 'rgba(255, 244, 212, 0.92)';
+  ctx.beginPath();
+  ctx.arc(w * 0.63, h * 0.36, h * 0.055, 0, Math.PI * 2);
+  ctx.fill();
+  // Distant skyline silhouette.
+  ctx.fillStyle = '#2a1738';
+  let x = 0;
+  let seed = 7;
+  while (x < w) {
+    seed = (seed * 9301 + 49297) % 233280;
+    const bw = 26 + (seed % 70);
+    seed = (seed * 9301 + 49297) % 233280;
+    const bh = 20 + (seed % 120);
+    ctx.fillRect(x, h * 0.5 - bh, bw, bh);
+    x += bw + 7;
+  }
+  // Sea band and horizon glow.
+  const sea = ctx.createLinearGradient(0, h * 0.5, 0, h * 0.62);
+  sea.addColorStop(0, '#2d4a68');
+  sea.addColorStop(1, '#14243c');
+  ctx.fillStyle = sea;
+  ctx.fillRect(0, h * 0.5, w, h * 0.12);
+  ctx.fillStyle = 'rgba(255, 180, 120, 0.22)';
+  for (let k = 0; k < 22; k += 1) {
+    ctx.fillRect(w * 0.42 + Math.sin(k * 2.1) * 60 + k * 14, h * 0.5 + 10 + k * 3, 40 + k * 2, 2);
+  }
+}
+
+export function drawTitle(ctx, game) {
+  const w = ctx.canvas.width;
+  const h = ctx.canvas.height;
+  const s = w / 1920;
+  ctx.save();
+  ctx.scale(s, s);
+  const W = 1920;
+  const H = h / s;
+  ctx.fillStyle = 'rgba(10, 6, 16, 0.34)';
+  ctx.fillRect(0, 0, W, H);
+  skyline(ctx, 1920, 760);
+  // City silhouette with palms.
+  ctx.fillStyle = 'rgba(14, 8, 22, 0.86)';
+  for (let k = 0; k < 26; k += 1) {
+    const bx = k * 78 - 20;
+    const bh = 60 + ((k * 37) % 130);
+    ctx.fillRect(bx, 760 - bh, 62, bh);
+  }
+  ctx.fillStyle = 'rgba(255, 47, 146, 0.55)';
+  for (let k = 0; k < 40; k += 1) {
+    const bx = (k * 53) % 1900;
+    const by = 700 - ((k * 29) % 120);
+    ctx.fillRect(bx, by, 4, 3);
+  }
+  // Foreground boulevard.
+  const road = ctx.createLinearGradient(0, 760, 0, H);
+  road.addColorStop(0, '#2a2136');
+  road.addColorStop(1, '#120d1a');
+  ctx.fillStyle = road;
+  ctx.fillRect(0, 760, W, H - 760);
+  ctx.strokeStyle = 'rgba(255, 196, 81, 0.5)';
+  ctx.lineWidth = 3;
+  for (let k = 0; k < 8; k += 1) {
+    ctx.beginPath();
+    ctx.moveTo(960 + (k - 4) * 220, 1080);
+    ctx.lineTo(960 + (k - 4) * 60, 760);
+    ctx.stroke();
+  }
+  // Title block.
+  ctx.save();
+  ctx.translate(140, 250);
+  ctx.font = `italic 900 152px ${FONT.head}`;
+  ctx.fillStyle = 'rgba(255, 47, 146, 0.55)';
+  ctx.shadowColor = 'rgba(255, 47, 146, 0.9)';
+  ctx.shadowBlur = 42;
+  ctx.fillText(CITY_NAME, 0, 0);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#fff3e2';
+  ctx.fillText(CITY_NAME, -4, -4);
+  ctx.restore();
+  ctx.font = `800 40px ${FONT.head}`;
+  ctx.fillStyle = '#ffcf5c';
+  ctx.fillText(TAGLINE, 146, 330);
+  ctx.font = `600 24px ${FONT.body}`;
+  ctx.fillStyle = 'rgba(255, 240, 226, 0.72)';
+  ctx.fillText('An original open-world crime story on a neon coast.', 148, 382);
+
+  // Menu card.
+  roundRectCard(ctx, 140, 470, 620, 300, 12);
+  ctx.fillStyle = 'rgba(12, 7, 20, 0.82)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255, 196, 120, 0.4)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  const hasSave = Boolean(game.saveData);
+  const items = hasSave
+    ? [`CONTINUE  ·  JOB ${game.saveData.job ?? 1}`, 'NEW NIGHT', 'CONTROLS']
+    : ['NEW NIGHT', 'CONTROLS'];
+  items.forEach((item, index) => {
+    const y = 530 + index * 62;
+    const selected = index === game.menuIndex;
+    if (selected) {
+      roundRectCard(ctx, 160, y - 34, 580, 50, 6);
+      ctx.fillStyle = 'rgba(255, 47, 146, 0.22)';
+      ctx.fill();
+      ctx.fillStyle = '#ff2f92';
+      ctx.fillRect(160, y - 34, 6, 50);
+    }
+    ctx.font = `900 30px ${FONT.head}`;
+    ctx.fillStyle = selected ? '#fff3e2' : 'rgba(255, 240, 226, 0.5)';
+    ctx.fillText(item, 186, y);
+  });
+  ctx.font = `700 18px ${FONT.narrow}`;
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+  ctx.fillText('ENTER  SELECT      W / S  MOVE', 186, 720);
+
+  // Cast strip.
+  ctx.font = `800 18px ${FONT.narrow}`;
+  ctx.fillStyle = 'rgba(255, 207, 92, 0.8)';
+  ctx.fillText('TONIGHT', 1420, 250);
+  const cast = [CAST.player, CAST.mara, CAST.kemp];
+  cast.forEach((person, index) => {
+    const y = 290 + index * 96;
+    ctx.fillStyle = person.shirt;
+    roundRectCard(ctx, 1420, y, 72, 72, 10);
+    ctx.fill();
+    ctx.fillStyle = person.skin;
+    ctx.beginPath();
+    ctx.arc(1456, y + 30, 17, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(20, 14, 26, 0.55)';
+    ctx.beginPath();
+    ctx.ellipse(1456, y + 17, 20, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = person.skin;
+    ctx.beginPath();
+    ctx.ellipse(1456, y + 76, 30, 22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#f7f1e6';
+    ctx.font = `900 22px ${FONT.head}`;
+    ctx.fillText(person.name, 1512, y + 30);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.font = `700 16px ${FONT.narrow}`;
+    ctx.fillText(person.role.toUpperCase(), 1512, y + 54);
+  });
+
+  // Footer.
+  ctx.font = `700 17px ${FONT.narrow}`;
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+  ctx.fillText('WASD + MOUSE  ·  E TO STEAL A CAR  ·  THREE JOBS  ·  NO NETWORK, NO ASSETS', 140, 1020);
+  ctx.restore();
+}
+
+export function drawPause(ctx, game) {
+  const w = ctx.canvas.width;
+  const h = ctx.canvas.height;
+  const s = w / 1920;
+  ctx.save();
+  ctx.scale(s, s);
+  ctx.fillStyle = 'rgba(8, 5, 14, 0.72)';
+  ctx.fillRect(0, 0, 1920, h / s);
+  roundRectCard(ctx, 560, 260, 800, 470, 14);
+  ctx.fillStyle = 'rgba(14, 9, 22, 0.95)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255, 196, 120, 0.4)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.font = `italic 900 72px ${FONT.head}`;
+  ctx.fillStyle = '#fff3e2';
+  ctx.fillText('PAUSED', 600, 356);
+  ctx.font = `700 22px ${FONT.narrow}`;
+  ctx.fillStyle = '#ffcf5c';
+  ctx.fillText('THE CITY WAITS', 604, 396);
+  const rows = [
+    ['WASD', 'walk and drive'],
+    ['MOUSE + CLICK', 'aim and fire'],
+    ['E', 'enter or leave a car'],
+    ['SPACE', 'handbrake'],
+    ['SHIFT', 'sprint'],
+    ['1 / 2 / 3', 'weapons  ·  R reload'],
+    ['ESC', 'back to the city'],
+  ];
+  rows.forEach(([key, action], index) => {
+    const y = 470 + index * 34;
+    ctx.font = `800 21px ${FONT.narrow}`;
+    ctx.fillStyle = '#ffb066';
+    ctx.fillText(key, 610, y);
+    ctx.font = `600 21px ${FONT.body}`;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.fillText(action, 830, y);
+  });
+  ctx.restore();
+}
+
+export function drawBusted(ctx, game, info) {
+  const w = ctx.canvas.width;
+  const h = ctx.canvas.height;
+  const s = w / 1920;
+  ctx.save();
+  ctx.scale(s, s);
+  ctx.fillStyle = 'rgba(30, 4, 12, 0.78)';
+  ctx.fillRect(0, 0, 1920, h / s);
+  ctx.fillStyle = 'rgba(255, 51, 85, 0.16)';
+  ctx.fillRect(0, 380, 1920, 40);
+  ctx.fillStyle = 'rgba(61, 123, 255, 0.16)';
+  ctx.fillRect(0, 700, 1920, 40);
+  ctx.font = `italic 900 168px ${FONT.head}`;
+  ctx.fillStyle = 'rgba(255, 77, 94, 0.4)';
+  ctx.fillText('BUSTED', 96, 560);
+  ctx.fillStyle = '#fff3e2';
+  ctx.fillText('BUSTED', 90, 552);
+  ctx.font = `800 30px ${FONT.head}`;
+  ctx.fillStyle = '#ffd891';
+  ctx.fillText(info?.reason ?? 'VCPD HOLDS YOU FOR QUESTIONING', 100, 620);
+  ctx.font = `600 24px ${FONT.body}`;
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+  ctx.fillText(`Legal fee  $${(info?.fee ?? 0).toLocaleString('en-US')}   ·   ${info?.line ?? 'The ledger can wait until morning.'}`, 100, 668);
+  ctx.font = `900 26px ${FONT.head}`;
+  ctx.fillStyle = '#ffcf5c';
+  ctx.fillText('PRESS  ENTER  TO WALK OUT', 100, 800);
+  ctx.restore();
+}
+
+export function drawWasted(ctx, game, info) {
+  const w = ctx.canvas.width;
+  const h = ctx.canvas.height;
+  const s = w / 1920;
+  ctx.save();
+  ctx.scale(s, s);
+  ctx.fillStyle = 'rgba(20, 6, 14, 0.82)';
+  ctx.fillRect(0, 0, 1920, h / s);
+  const g = ctx.createRadialGradient(960, 520, 80, 960, 520, 760);
+  g.addColorStop(0, 'rgba(120, 20, 40, 0.5)');
+  g.addColorStop(1, 'rgba(20, 6, 14, 0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 1920, h / s);
+  ctx.font = `italic 900 168px ${FONT.head}`;
+  ctx.fillStyle = 'rgba(255, 77, 94, 0.4)';
+  ctx.fillText('WASTED', 96, 560);
+  ctx.fillStyle = '#fff3e2';
+  ctx.fillText('WASTED', 90, 552);
+  ctx.font = `800 30px ${FONT.head}`;
+  ctx.fillStyle = '#ffd891';
+  ctx.fillText(info?.reason ?? 'BAY GENERAL PATCHED YOU UP', 100, 620);
+  ctx.font = `600 24px ${FONT.body}`;
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+  ctx.fillText(`Hospital bill  $${(info?.fee ?? 0).toLocaleString('en-US')}   ·   ${info?.line ?? 'Vesper does not forgive a slow night.'}`, 100, 668);
+  ctx.font = `900 26px ${FONT.head}`;
+  ctx.fillStyle = '#ffcf5c';
+  ctx.fillText('PRESS  ENTER  TO GET BACK OUT THERE', 100, 800);
+  ctx.restore();
+}
