@@ -1,0 +1,6 @@
+[
+  { "name": "1-cover.jpg", "query": "?scene=cover" },
+  { "name": "2-chase.jpg", "query": "?scene=chase" },
+  { "name": "3-mission.jpg", "query": "?scene=mission" },
+  { "name": "4-onfoot.jpg", "query": "?scene=onfoot" }
+]
