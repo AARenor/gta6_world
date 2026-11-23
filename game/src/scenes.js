@@ -218,7 +218,7 @@ function stageCover(game) {
   }
 
   // Police closing in from ahead and from behind.
-  cop(game, X - 43, Y - 24, Math.PI / 2, 'V-12', 'block');
+  const target = cop(game, X - 43, Y - 24, Math.PI / 2, 'V-12', 'block');
   const behind = cop(game, X + 43, Y + 62, -Math.PI / 2, 'V-27');
   behind.speed = 420;
   behind.sirenPhase = 0.32;
@@ -258,9 +258,13 @@ function stageCover(game) {
   for (let k = 0; k < 8; k += 1) game.effects.spawnSkid(car.x - 26 - k * 20, car.y + 44 + k * 3, car.angle + 0.2);
   for (let k = 0; k < 9; k += 1) game.effects.spawnTyreSmoke(car.x - 18 - k * 10, car.y + 36 + k * 4, car.angle + 0.3);
   game.effects.spawnSparks(X + 43, Y - 96, 0.6, 6);
+  player.angle = Math.atan2(target.y - player.y, target.x - player.x);
+  const muzzleX = player.x + Math.cos(player.angle) * 16;
+  const muzzleY = player.y + Math.sin(player.angle) * 16;
+  game.effects.muzzleFlash(muzzleX, muzzleY, player.angle, 'player');
+  game.effects.spawnTracer(muzzleX, muzzleY, target.x, target.y, '#ffe6a3');
   camera(game, X + 16, Y + 16, 1.8);
-  player.angle = Math.atan2(car.y - player.y, car.x - player.x);
-  game.sceneAim = { x: car.x, y: car.y };
+  game.sceneAim = { x: target.x, y: target.y };
   return 'play';
 }
 
