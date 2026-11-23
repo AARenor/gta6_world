@@ -262,7 +262,18 @@ function stageCover(game) {
   const muzzleX = player.x + Math.cos(player.angle) * 16;
   const muzzleY = player.y + Math.sin(player.angle) * 16;
   game.effects.muzzleFlash(muzzleX, muzzleY, player.angle, 'player');
-  game.effects.spawnTracer(muzzleX, muzzleY, target.x, target.y, '#ffe6a3');
+  const flash = game.effects.particles.findLast((particle) => particle.kind === 'muzzle');
+  flash.size = 42;
+  game.effects.particles.push({ ...flash });
+  const normalX = -Math.sin(player.angle);
+  const normalY = Math.cos(player.angle);
+  for (const offset of [-2.2, 0, 2.2]) {
+    game.effects.spawnTracer(
+      muzzleX + normalX * offset, muzzleY + normalY * offset,
+      target.x + normalX * offset, target.y + normalY * offset,
+      offset === 0 ? '#fffbe6' : '#ffc04c',
+    );
+  }
   camera(game, X + 16, Y + 16, 1.8);
   game.sceneAim = { x: target.x, y: target.y };
   return 'play';
@@ -287,6 +298,7 @@ function stageChase(game) {
   player.health = 51;
   player.armour = 0;
   player.money = 6420;
+
   player.respect = 3;
   game.district = game.city.districtAt(player.x, player.y);
 
