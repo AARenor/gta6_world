@@ -12,6 +12,8 @@ const CX = 5 * CITY.pitch;
 const CY = 6 * CITY.pitch;
 const TX = 2 * CITY.pitch;
 const TY = 10 * CITY.pitch;
+const OX = 6 * CITY.pitch;
+const OY = 11 * CITY.pitch;
 
 function reset(game) {
   game.vehicles.length = 0;
@@ -183,10 +185,10 @@ export function stageScene(name, game) {
 
 function stageCover(game) {
   const player = game.player;
-  game.hour = 19.05;
+  game.hour = 16.35;
   game.traffic.setClock?.(11.2);
-  // The hero car, mid-drift up the middle of a four-lane road.
-  const car = createVehicle('muscle', X + 15, Y + 30, -Math.PI / 2 + 0.2, '#ff5a2e');
+  // The stolen cab is already on its way to the Tidepool.
+  const car = createVehicle('taxi', X + 15, Y + 30, -Math.PI / 2 + 0.2, '#f6c33d');
   car.driver = 'player';
   car.speed = 342;
   car.vx = 58;
@@ -203,10 +205,11 @@ function stageCover(game) {
   player.armour = 46;
   player.money = 18450;
   player.respect = 4;
+  game.district = game.city.districtAt(player.x, player.y);
 
-  // Four lanes of traffic on the road, two each way, headlights on.
+  // Four lanes of traffic on the road, two each way.
   const traffic = [
-    ['taxi', X + 43, Y - 58, -Math.PI / 2, '#f6c33d'],
+    ['sedan', X + 43, Y - 58, -Math.PI / 2, '#e8dcc4'],
     ['sedan', X - 15, Y - 24, Math.PI / 2, '#5c8fa8'],
     ['muscle', X - 15, Y + 84, Math.PI / 2, '#f2c94c'],
     ['van', X - 43, Y - 74, Math.PI / 2, '#d9d2c2'],
@@ -227,12 +230,10 @@ function stageCover(game) {
   behind.sirenPhase = 0.32;
   game.police.setStars(game, 3);
 
-  // The job: the Lantern cab waiting at the right kerb.
-  const cab = park(game, 'taxi', X + 66, Y + 52, -Math.PI / 2, '#f6c33d');
-  cab.indicator = 1;
-  cab.indicatorOn = true;
-  setJob(game, 0, 1, 'Take the cab from the Motel 9 lot', 'Deliver it to the Tidepool', {
-    x: cab.x, y: cab.y, radius: 40, kind: 'target', label: 'THE CAB',
+  game.missions.setCab(car);
+  const destination = game.city.points.tidepool;
+  setJob(game, 0, 1, 'DRIVE THE CAB TO THE TIDEPOOL', 'Do not scratch the paint', {
+    x: destination.x, y: destination.y, radius: 54, kind: 'deliver', label: 'THE TIDEPOOL',
   });
 
   // Neon at street level either side of the road, roofs dressed behind.
@@ -263,12 +264,9 @@ function stageCover(game) {
   for (let k = 0; k < 8; k += 1) game.effects.spawnSkid(car.x - 26 - k * 20, car.y + 44 + k * 3, car.angle + 0.2);
   for (let k = 0; k < 9; k += 1) game.effects.spawnTyreSmoke(car.x - 18 - k * 10, car.y + 36 + k * 4, car.angle + 0.3);
   game.effects.spawnSparks(X + 43, Y - 96, 0.6, 6);
-  game.effects.spawnPuff(cab.x, cab.y, '#a99aa8', 3);
-
-  camera(game, X + 16, Y + 16, 3.9);
+  camera(game, X + 16, Y + 16, 1.8);
   player.angle = -Math.PI / 2 + 0.2;
-  game.sceneAim = { x: cab.x, y: cab.y };
-  game.hud.say('mara', 'Cab is at the Motel 9 kerb, Ray. VCPD is two blocks out — take it and run the coast road.', 8);
+  game.sceneAim = { x: car.x, y: car.y };
   return 'play';
 }
 
@@ -292,6 +290,7 @@ function stageChase(game) {
   player.armour = 0;
   player.money = 6420;
   player.respect = 3;
+  game.district = game.city.districtAt(player.x, player.y);
 
   // Four cruisers: one alongside, one at the rear quarter, one cutting ahead, one on the kerb.
   const rammer = cop(game, CX - 43, CY - 16, -Math.PI / 2 - 0.14, 'V-63');
@@ -335,7 +334,7 @@ function stageChase(game) {
     game.effects.spawnPuff(CX - 78 + k * 3, CY + 36 - k * 10, `rgba(${190 - k * 6}, ${176 - k * 6}, ${190 - k * 6}, 0.8)`, 2);
   }
 
-  setJob(game, 1, 2, 'Break line of sight and lose the heat', 'Stars cool when they cannot see you', null);
+  setJob(game, 1, 2, 'LOSE THE HEAT', 'Stars cool when they cannot see you', null);
 
   billboard(game, CX - 175, CY - 24, 'NEON DRIFT', PALETTE.neonViolet, 120, 36);
   billboard(game, CX + 150, CY + 62, 'CINDER GRILL', PALETTE.neonAmber, 116, 34);
@@ -350,26 +349,25 @@ function stageChase(game) {
     { x: CX + 76, y: CY + 36 }, { x: CX + 82, y: CY + 88 }, { x: CX + 76, y: CY + 132 },
     { x: CX - 66, y: CY + 150 },
   ]);
-  camera(game, CX + 16, CY + 12, 3.8);
+  camera(game, CX + 16, CY + 12, 1.9);
   player.angle = -Math.PI / 2 + 0.04;
   game.sceneAim = { x: CX - 43, y: CY - 16 };
-  game.hud.say('cane', 'Kestrel GT, plate VES-9. Roadblock on the coast road — cut the lights.', 8);
   return 'play';
 }
 
 function stageMission(game) {
   const player = game.player;
-  game.hour = 20.1;
+  game.hour = 18.1;
   const car = createVehicle('courier', TX + 54, TY - 8, 0.42, '#3b2b45');
   car.health = 18;
   car.wrecked = true;
-  car.burning = 0.8;
+  car.burning = 0;
   car.lightsOn = false;
   car.driver = null;
   game.vehicles.push(car);
   // The player stands a few paces off the wreck, gun up, the case glowing on the asphalt.
-  player.x = TX - 24;
-  player.y = TY + 30;
+  player.x = TX + 28;
+  player.y = TY + 31;
   player.angle = -0.2;
   player.health = 74;
   player.armour = 20;
@@ -377,13 +375,13 @@ function stageMission(game) {
   player.respect = 6;
   player.weapon = 'shotgun';
   player.inCar = null;
+  game.district = game.city.districtAt(player.x, player.y);
 
-  const ledger = { x: TX + 112, y: TY + 26, taken: false };
+  const ledger = { x: TX + 95, y: TY + 20, taken: false };
   game.missions.setStagedLedger(ledger);
-  setJob(game, 2, 2, 'Take the ledger from the wreck', 'Walk to the case', {
+  setJob(game, 2, 2, 'TAKE THE LEDGER', 'Walk to the case', {
     x: ledger.x, y: ledger.y, radius: 34, kind: 'take', label: 'THE LEDGER',
   });
-  game.hud.card('THE TIDEPOOL LEDGER', 'STAGE 2 OF 3', 'TAKE THE LEDGER', '$9,000');
 
   const traffic = [
     ['sedan', TX - 168, TY - 15, 0, '#efe3cf'],
@@ -395,23 +393,21 @@ function stageMission(game) {
     const other = createVehicle(type, x, y, angle, color);
     game.vehicles.push(other);
   }
-  const copCar = cop(game, TX + 168, TY - 43, Math.PI, 'V-27', 'block');
-  copCar.speed = 0;
+  const copCar = cop(game, TX + 168, TY - 43, Math.PI, 'V-27', 'pursue');
+  copCar.speed = 250;
   game.police.setStars(game, 2);
 
   billboard(game, TX - 178, TY - 30, 'THE TIDEPOOL', PALETTE.neonTeal, 124, 38);
-  billboard(game, TX + 168, TY + 74, 'LAST CALL', PALETTE.neonAmber, 112, 34);
   forceSign(game, 2, 9, 'PIER NINE', PALETTE.neonAmber, 26, 'south');
   dressRoof(game, 2, 10);
   dressRoof(game, 2, 9);
   dressRoof(game, 3, 10);
 
   runMissionCrowd(game, TX, TY);
-  for (let k = 0; k < 9; k += 1) game.effects.spawnPuff(car.x - 6 + k * 3, car.y - 8 - k * 7, 'rgba(64,52,66,0.85)', 2);
+  for (let k = 0; k < 4; k += 1) game.effects.spawnPuff(car.x - 6 + k * 3, car.y - 8 - k * 7, 'rgba(64,52,66,0.85)', 2);
   game.effects.spawnSparks(car.x + 30, car.y + 10, 0.4, 6);
-  camera(game, TX + 20, TY - 10, 3.6);
-  game.sceneAim = { x: ledger.x, y: ledger.y };
-  game.hud.say('mara', 'Ledger is in the wreck. VCPD is rolling — make it quick.', 8);
+  camera(game, TX + 54, TY + 8, 1.9);
+  game.sceneAim = { x: copCar.x, y: copCar.y };
   return 'play';
 }
 
@@ -432,9 +428,9 @@ function runMissionCrowd(game, x, y) {
 
 function stageOnfoot(game) {
   const player = game.player;
-  game.hour = 20.6;
-  player.x = X - 10;
-  player.y = Y + 10;
+  game.hour = 15.7;
+  player.x = OX - 10;
+  player.y = OY + 10;
   player.angle = -0.5;
   player.health = 74;
   player.armour = 0;
@@ -442,36 +438,36 @@ function stageOnfoot(game) {
   player.respect = 1;
   player.weapon = 'smg';
   player.inCar = null;
+  game.district = game.city.districtAt(player.x, player.y);
 
   // A coupe stopped at the kerb with its driver bailing out.
-  const target = createVehicle('sedan', X + 20, Y - 20, 0.06, '#25d0c0');
-  target.lightsOn = true;
+  const target = createVehicle('sedan', OX + 20, OY - 20, 0.06, '#25d0c0');
+  target.lightsOn = false;
   target.driver = null;
   target.parked = false;
   target.indicator = 1;
   target.indicatorOn = true;
   game.vehicles.push(target);
-  const bailing = game.peds.place(4, 4, 0, {});
-  bailing.x = X + 22;
-  bailing.y = Y - 58;
+  const bailing = game.peds.place(6, 10, 0, {});
+  bailing.x = OX + 22;
+  bailing.y = OY - 58;
   bailing.state = 'flee';
   bailing.panicAngle = -0.9;
   bailing.speed = 210;
   bailing.timer = 2.4;
   bailing.alert = 0;
 
-  game.effects.muzzleFlash(X - 4, Y - 6, -0.5, 'player');
-  game.effects.spawnTracer(X - 4, Y - 6, X + 16, Y - 14, '#ffe6a3');
-  game.effects.spawnSparks(X + 20, Y - 16, 0.1, 8);
-  game.effects.spawnCasing(X - 12, Y + 2, 1.2);
+  game.effects.muzzleFlash(OX - 4, OY - 6, -0.5, 'player');
+  game.effects.spawnTracer(OX - 4, OY - 6, OX + 16, OY - 14, '#ffe6a3');
+  game.effects.spawnSparks(OX + 20, OY - 16, 0.1, 8);
+  game.effects.spawnCasing(OX - 12, OY + 2, 1.2);
   game.police.setStars(game, 2);
 
-  // Traffic still running on the road either side of the hold-up.
   const traffic = [
-    ['taxi', X + 43, Y - 74, -Math.PI / 2, '#f6c33d'],
-    ['muscle', X + 15, Y + 92, -Math.PI / 2, '#f2c94c'],
-    ['sedan', X - 43, Y + 36, Math.PI / 2, '#5c8fa8'],
-    ['van', X - 15, Y - 62, Math.PI / 2, '#4f7078'],
+    ['taxi', OX + 43, OY - 74, -Math.PI / 2, '#f6c33d'],
+    ['muscle', OX + 15, OY + 92, -Math.PI / 2, '#f2c94c'],
+    ['sedan', OX - 43, OY + 36, Math.PI / 2, '#5c8fa8'],
+    ['van', OX - 15, OY - 62, Math.PI / 2, '#4f7078'],
   ];
   for (const [type, x, y, angle, color] of traffic) {
     const other = createVehicle(type, x, y, angle, color);
@@ -479,33 +475,34 @@ function stageOnfoot(game) {
   }
 
   crowd(game, [
-    { x: X - 66, y: Y - 82 }, { x: X - 70, y: Y - 54 }, { x: X - 64, y: Y - 26 },
-    { x: X - 70, y: Y + 2 }, { x: X - 64, y: Y + 30 }, { x: X - 70, y: Y + 58 },
-    { x: X - 64, y: Y + 86 }, { x: X + 76, y: Y + 40 }, { x: X + 82, y: Y + 68 },
-    { x: X + 76, y: Y + 96 }, { x: X + 82, y: Y + 124 }, { x: X + 76, y: Y - 96 },
-    { x: X + 82, y: Y - 124 }, { x: X - 20, y: Y + 46 }, { x: X + 6, y: Y + 54 },
+    { x: OX - 66, y: OY - 82 }, { x: OX - 70, y: OY - 54 }, { x: OX - 64, y: OY - 26 },
+    { x: OX - 70, y: OY + 2 }, { x: OX - 64, y: OY + 30 }, { x: OX - 70, y: OY + 58 },
+    { x: OX - 64, y: OY + 86 }, { x: OX + 76, y: OY + 40 }, { x: OX + 82, y: OY + 68 },
+    { x: OX + 76, y: OY + 96 }, { x: OX + 82, y: OY + 124 }, { x: OX + 76, y: OY - 96 },
+    { x: OX + 82, y: OY - 124 }, { x: OX - 20, y: OY + 46 }, { x: OX + 6, y: OY + 54 },
   ]);
   for (const ped of game.peds.peds) {
-    const d = Math.hypot(ped.x - (X + 4), ped.y - (Y - 40));
+    const d = Math.hypot(ped.x - (OX + 4), ped.y - (OY - 40));
     if (d < 150) {
-      game.peds.startle(ped, X + 4, Y - 40, 1.1);
+      game.peds.startle(ped, OX + 4, OY - 40, 1.1);
       ped.timer = 2.8;
     }
   }
 
-  billboard(game, X - 175, Y - 26, 'VELVET ROOM', PALETTE.neonPink, 120, 36);
-  billboard(game, X + 150, Y + 60, 'SODA POP', PALETTE.neonAmber, 112, 34);
-  forceSign(game, 3, 4, 'BLUE HOUR', PALETTE.neonPink, 28, 'east');
-  dressRoof(game, 4, 4);
-  dressRoof(game, 3, 4);
-  dressRoof(game, 4, 5);
+  billboard(game, OX - 175, OY - 26, 'SURF CO', PALETTE.neonTeal, 120, 36);
+  billboard(game, OX + 150, OY + 60, 'PIER 12', PALETTE.neonAmber, 112, 34);
+  forceSign(game, 5, 10, 'HALCYON BEACH', PALETTE.neonPink, 28, 'south');
+  dressRoof(game, 6, 10);
+  dressRoof(game, 5, 10);
+  dressRoof(game, 6, 11);
 
-  setJob(game, 0, 1, 'Drive the cab to the Tidepool pier', 'Do not scratch the paint', {
-    x: X - 250, y: Y + 320, radius: 50, kind: 'deliver', label: 'THE TIDEPOOL',
-  }, 47);
+  const destination = game.city.points.boardwalk;
+  setJob(game, 1, 0, 'REACH THE BOARDWALK', 'Meet Doc Kemp', {
+    x: destination.x, y: destination.y, radius: 54, kind: 'job', label: 'BOARDWALK',
+  });
 
-  game.effects.spawnTyreSmoke(X + 30, Y - 20, 0.3);
-  camera(game, X + 16, Y + 4, 4.4);
-  game.sceneAim = { x: X + 20, y: Y - 22 };
+  game.effects.spawnTyreSmoke(OX + 30, OY - 20, 0.3);
+  camera(game, OX + 16, OY + 4, 1.9);
+  game.sceneAim = { x: target.x, y: target.y };
   return 'play';
 }

@@ -169,6 +169,18 @@ export function createHud() {
       const text = marker.label || '';
       if (!text) continue;
       ctx.save();
+      if (marker.kind === 'take') {
+        ctx.strokeStyle = '#241a16';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(p.x - 9, p.y - 20, 18, 11);
+        ctx.fillStyle = '#a86832';
+        roundRect(ctx, p.x - 23, p.y - 12, 46, 29, 4);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#ffd891';
+        ctx.fillRect(p.x - 14, p.y - 1, 5, 5);
+        ctx.fillRect(p.x + 9, p.y - 1, 5, 5);
+      }
       ctx.font = `900 34px ${FONT.head}`;
       const width = ctx.measureText(text).width + 40;
       ctx.fillStyle = 'rgba(13, 8, 20, 0.8)';
@@ -220,29 +232,35 @@ export function createHud() {
     const x = 34;
     const y = 26;
     const w = 1000;
-    let height = 214;
-    if (mission) height = mission.waiting ? 176 : mission.timer > 0 ? 252 : 232;
+    const height = mission ? 222 : 160;
     panel(ctx, x, y, w, height, mission ? '#ff8a3d' : '#6b6270');
     if (!mission) {
       label(ctx, 'NO JOB ACTIVE', x + 30, y + 48, 42, '#ffd34d');
       label(ctx, 'Roll the city and wait for a call', x + 30, y + 104, 30, PALETTE.muted, 'left', 500, FONT.body);
       return;
     }
-    // Header: job number chip and title.
     ctx.fillStyle = '#ff8a3d';
-    roundRect(ctx, x + 24, y + 20, 168, 50, 6);
+    roundRect(ctx, x + 24, y + 16, 168, 48, 6);
     ctx.fill();
-    label(ctx, `JOB ${mission.num}/${mission.total}`, x + 108, y + 46, 28, '#1a0f18', 'center', 900);
-    label(ctx, mission.title, x + 208, y + 46, 44, PALETTE.text, 'left', 900);
+    label(ctx, `JOB ${mission.num}/${mission.total}`, x + 108, y + 40, 28, '#1a0f18', 'center', 900);
+    label(ctx, mission.title, x + 208, y + 40, 36, PALETTE.text, 'left', 900);
     if (mission.timer > 0) {
       ctx.fillStyle = 'rgba(255, 77, 94, 0.16)';
-      roundRect(ctx, x + w - 168, y + 16, 144, 58, 6);
+      roundRect(ctx, x + w - 168, y + 12, 144, 54, 6);
       ctx.fill();
-      label(ctx, `${String(Math.floor(mission.timer / 60)).padStart(2, '0')}:${String(Math.floor(mission.timer % 60)).padStart(2, '0')}`, x + w - 96, y + 46, 38, '#ff6a7a', 'center', 800, FONT.mono);
+      label(ctx, `${String(Math.floor(mission.timer / 60)).padStart(2, '0')}:${String(Math.floor(mission.timer % 60)).padStart(2, '0')}`, x + w - 96, y + 40, 38, '#ff6a7a', 'center', 800, FONT.mono);
     }
-    // Stage pips.
+    // The current action is the strongest line, but long live objectives still fit the panel.
+    const objective = mission.objective.toUpperCase();
+    ctx.save();
+    ctx.font = `900 64px ${FONT.head}`;
+    const objectiveWidth = ctx.measureText(objective).width;
+    const objectiveSize = objectiveWidth > w - 56 ? 64 * (w - 56) / objectiveWidth : 64;
+    ctx.restore();
+    label(ctx, objective, x + 28, y + 106, objectiveSize, '#fff6e6', 'left', 900);
+
     const stages = mission.stages ?? 3;
-    const pipY = y + 92;
+    const pipY = y + 151;
     for (let k = 0; k < stages; k += 1) {
       const px = x + 28 + k * 58;
       ctx.fillStyle = k < (mission.stage || 1) ? '#ff8a3d' : 'rgba(255, 255, 255, 0.16)';
@@ -252,13 +270,7 @@ export function createHud() {
     label(ctx, mission.stage > 0 ? `STAGE ${mission.stage}/${stages}` : 'READY', x + 28 + stages * 58, pipY + 5, 26, PALETTE.muted, 'left', 700, FONT.narrow);
     if (mission.progress) label(ctx, mission.progress, x + w - 28, pipY + 5, 30, '#ffd34d', 'right', 800, FONT.mono);
     else label(ctx, `REWARD ${moneyText(mission.reward)}`, x + w - 28, pipY + 5, 26, PALETTE.money, 'right', 800, FONT.narrow);
-    // Objective and next.
-    label(ctx, mission.objective, x + 28, y + 140, 34, '#fff6e6', 'left', 700, FONT.body);
-    ctx.fillStyle = 'rgba(255, 138, 61, 0.9)';
-    roundRect(ctx, x + 28, y + 166, 92, 34, 4);
-    ctx.fill();
-    label(ctx, 'NEXT', x + 74, y + 184, 22, '#1a0f18', 'center', 900);
-    label(ctx, mission.next, x + 136, y + 184, 26, PALETTE.muted, 'left', 600, FONT.body);
+    label(ctx, `NEXT  ${mission.next}`, x + 28, y + 192, 26, PALETTE.muted, 'left', 600, FONT.body);
   }
 
   function drawMoneyStars(ctx, game) {
@@ -309,33 +321,34 @@ export function createHud() {
   function drawDispatch(ctx, game) {
     const rows = game.police?.dispatch(game) ?? [];
     if (rows.length === 0) return;
-    const w = 640;
+    const w = 520;
     const x = 1880 - w;
     const y = 312;
-    const h = 78 + rows.length * 54;
+    const h = 68 + rows.length * 42;
     panel(ctx, x, y, w, h, '#ff3355');
-    label(ctx, 'VCPD DISPATCH', x + 24, y + 36, 30, '#ff8f9a', 'left', 900);
-    label(ctx, `${rows.length + (game.police?.blocks?.length ?? 0)} UNITS · ${'★'.repeat(game.police?.stars ?? 0)}`, x + w - 22, y + 36, 24, 'rgba(255,255,255,0.62)', 'right', 700, FONT.narrow);
+    label(ctx, 'VCPD DISPATCH', x + 20, y + 32, 40, '#ff8f9a', 'left', 900);
+    const units = rows.length + (game.police?.blocks?.length ?? 0);
+    label(ctx, `${units} ${units === 1 ? 'UNIT' : 'UNITS'}`, x + w - 20, y + 32, 24, 'rgba(255,255,255,0.62)', 'right', 700, FONT.narrow);
     const colors = {
       RAMMING: '#ff4d5e', ROADBLOCK: '#ffc247', FLANKING: '#26efd4', SPOTLIGHT: '#9d6bff',
       'CLOSING IN': '#ff8a3d', PURSUING: '#b9a9b7', DISABLED: '#6b6270',
     };
-    let rowY = y + 74;
+    let rowY = y + 69;
     for (const row of rows) {
       if (row.kind === 'air') {
         ctx.fillStyle = 'rgba(157, 107, 255, 0.16)';
-        roundRect(ctx, x + 12, rowY - 19, w - 24, 42, 4);
+        roundRect(ctx, x + 12, rowY - 17, w - 24, 36, 4);
         ctx.fill();
       }
-      label(ctx, row.name, x + 24, rowY + 2, 28, row.kind === 'air' ? '#c9b4ff' : '#f1e7dd', 'left', 800, FONT.mono);
-      label(ctx, distanceText(row.dist), x + 296, rowY + 2, 26, 'rgba(255,255,255,0.74)', 'left', 700, FONT.mono);
+      label(ctx, row.name, x + 20, rowY, 29, row.kind === 'air' ? '#c9b4ff' : '#f1e7dd', 'left', 800, FONT.mono);
+      label(ctx, distanceText(row.dist), x + 210, rowY, 26, 'rgba(255,255,255,0.74)', 'left', 700, FONT.mono);
       const status = row.status;
       const color = colors[status] ?? '#b9a9b7';
       ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
-      roundRect(ctx, x + w - 224, rowY - 18, 202, 38, 4);
+      roundRect(ctx, x + w - 198, rowY - 16, 178, 34, 4);
       ctx.fill();
-      label(ctx, status, x + w - 123, rowY + 1, 23, color, 'center', 900, FONT.narrow);
-      rowY += 54;
+      label(ctx, status, x + w - 109, rowY, 23, color, 'center', 900, FONT.narrow);
+      rowY += 42;
     }
   }
 
@@ -462,8 +475,19 @@ export function createHud() {
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
-    // North marker on the rim.
-    const northAngle = -angle - Math.PI / 2;
+    ctx.restore();
+    ctx.restore();
+    // Draw compass and ticks outside the clipped, translated map.
+    const northAngle = -angle - Math.PI;
+    for (let k = 0; k < 12; k += 1) {
+      const a = (k / 12) * Math.PI * 2 + northAngle;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * (radius + 2), cy + Math.sin(a) * (radius + 2));
+      ctx.lineTo(cx + Math.cos(a) * (radius + 12), cy + Math.sin(a) * (radius + 12));
+      ctx.strokeStyle = 'rgba(255, 220, 180, 0.42)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
     const nx = cx + Math.cos(northAngle) * (radius - 2);
     const ny = cy + Math.sin(northAngle) * (radius - 2);
     ctx.beginPath();
@@ -474,18 +498,6 @@ export function createHud() {
     ctx.lineWidth = 2;
     ctx.stroke();
     label(ctx, 'N', nx, ny + 1, 24, '#ffd34d', 'center', 900);
-    // Ring ticks.
-    for (let k = 0; k < 12; k += 1) {
-      const a = (k / 12) * Math.PI * 2 + northAngle;
-      ctx.beginPath();
-      ctx.moveTo(cx + Math.cos(a) * (radius + 2), cy + Math.sin(a) * (radius + 2));
-      ctx.lineTo(cx + Math.cos(a) * (radius + 12), cy + Math.sin(a) * (radius + 12));
-      ctx.strokeStyle = 'rgba(255, 220, 180, 0.42)';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-    }
-    ctx.restore();
-    ctx.restore();
     label(ctx, (game.district ?? 'VELVET SQUARE').toUpperCase(), cx, cy - radius - 30, 30, '#ffd891', 'center', 900, FONT.narrow);
   }
 
@@ -505,21 +517,23 @@ export function createHud() {
   }
 
   function drawBar(ctx, x, y, w, h, value, color, name, valueText) {
+    const barX = x + 112;
+    const barWidth = w - 166;
     ctx.fillStyle = 'rgba(13, 8, 20, 0.9)';
-    roundRect(ctx, x, y, w, h, h * 0.5);
+    roundRect(ctx, barX, y, barWidth, h, h * 0.5);
     ctx.fill();
     const clamped = Math.max(0, Math.min(1, value));
     if (clamped > 0) {
       ctx.fillStyle = color;
-      roundRect(ctx, x + 2, y + 2, Math.max(3, (w - 4) * clamped), h - 4, (h - 4) * 0.5);
+      roundRect(ctx, barX + 2, y + 2, Math.max(3, (barWidth - 4) * clamped), h - 4, (h - 4) * 0.5);
       ctx.fill();
     }
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.24)';
     ctx.lineWidth = 2;
-    roundRect(ctx, x, y, w, h, h * 0.5);
+    roundRect(ctx, barX, y, barWidth, h, h * 0.5);
     ctx.stroke();
-    label(ctx, name, x + 14, y + h + 17, 22, 'rgba(255,255,255,0.8)', 'left', 800, FONT.narrow);
-    label(ctx, valueText, x + w - 10, y + h + 17, 24, '#f7f1e6', 'right', 800, FONT.mono);
+    label(ctx, name, x + 4, y + h / 2, 23, 'rgba(255,255,255,0.8)', 'left', 800, FONT.narrow);
+    label(ctx, valueText, x + w - 4, y + h / 2, 24, '#f7f1e6', 'right', 800, FONT.mono);
   }
 
   function drawVehiclePanel(ctx, game) {
@@ -603,7 +617,7 @@ export function createHud() {
 
   function drawDialogue(ctx, game) {
     if (!state.dialogue) {
-      drawHints(ctx, game);
+      if (!game.staged) drawHints(ctx, game);
       return;
     }
     const d = state.dialogue;
@@ -680,20 +694,20 @@ export function createHud() {
       ['SPACE', 'HANDBRAKE'],
       ['R', 'RELOAD'],
     ];
-    const w = hints.length * 196;
+    const w = hints.length * 172;
     let x = 960 - w / 2;
     const y = 1026;
     ctx.fillStyle = 'rgba(13, 8, 20, 0.7)';
     roundRect(ctx, 960 - w / 2 - 20, y - 30, w + 40, 60, 8);
     ctx.fill();
     for (const [key, action] of hints) {
-      const boxW = Math.max(52, key.length * 16 + 18);
+      const boxW = Math.max(46, key.length * 12 + 14);
       ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
       roundRect(ctx, x, y - 20, boxW, 40, 4);
       ctx.fill();
-      label(ctx, key, x + boxW / 2, y + 1, 22, '#ffe8c2', 'center', 800, FONT.narrow);
-      label(ctx, action, x + boxW + 10, y + 1, 18, 'rgba(255,255,255,0.58)', 'left', 700, FONT.narrow);
-      x += 196;
+      label(ctx, key, x + boxW / 2, y + 1, 20, '#ffe8c2', 'center', 800, FONT.narrow);
+      label(ctx, action, x + boxW + 10, y + 1, 16, 'rgba(255,255,255,0.58)', 'left', 700, FONT.narrow);
+      x += 172;
     }
   }
 
@@ -720,10 +734,10 @@ export function createHud() {
     }
     if (!text) return;
     ctx.save();
-    ctx.font = `900 40px ${FONT.head}`;
-    const width = ctx.measureText(text).width + 64;
+    ctx.font = `900 56px ${FONT.head}`;
+    const width = ctx.measureText(text).width + 72;
     ctx.fillStyle = 'rgba(13, 8, 20, 0.92)';
-    roundRect(ctx, 960 - width / 2, 782, width, 74, 8);
+    roundRect(ctx, 960 - width / 2, 766, width, 96, 8);
     ctx.fill();
     ctx.strokeStyle = 'rgba(255, 211, 77, 0.9)';
     ctx.lineWidth = 3;
@@ -731,7 +745,7 @@ export function createHud() {
     ctx.fillStyle = '#ffd34d';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(text, 960, 822);
+    ctx.fillText(text, 960, 814);
     ctx.restore();
   }
 
