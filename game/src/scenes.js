@@ -187,20 +187,14 @@ function stageCover(game) {
   const player = game.player;
   game.hour = 16.35;
   game.traffic.setClock?.(11.2);
-  // The stolen cab is already on its way to the Tidepool.
+  // The stolen cab has stopped and its driver is on foot beside it.
   const car = createVehicle('taxi', X + 15, Y + 30, -Math.PI / 2 + 0.2, '#f6c33d');
-  car.driver = 'player';
-  car.speed = 342;
-  car.vx = 58;
-  car.vy = -336;
-  car.slip = 62;
-  car.roll = 0.06;
   car.indicator = 1;
   car.indicatorOn = true;
   game.vehicles.push(car);
-  player.inCar = car;
-  player.x = car.x;
-  player.y = car.y;
+  player.inCar = null;
+  player.x = car.x - 24;
+  player.y = car.y + 6;
   player.health = 82;
   player.armour = 46;
   player.money = 18450;
@@ -265,7 +259,7 @@ function stageCover(game) {
   for (let k = 0; k < 9; k += 1) game.effects.spawnTyreSmoke(car.x - 18 - k * 10, car.y + 36 + k * 4, car.angle + 0.3);
   game.effects.spawnSparks(X + 43, Y - 96, 0.6, 6);
   camera(game, X + 16, Y + 16, 1.8);
-  player.angle = -Math.PI / 2 + 0.2;
+  player.angle = Math.atan2(car.y - player.y, car.x - player.x);
   game.sceneAim = { x: car.x, y: car.y };
   return 'play';
 }
