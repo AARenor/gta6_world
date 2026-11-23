@@ -141,6 +141,7 @@ export function createHud() {
 
     drawWorldLabels(ctx, game);
     drawJobPanel(ctx, game);
+    drawCrewRace(ctx, game);
     drawMoneyStars(ctx, game);
     drawDispatch(ctx, game);
     drawMinimap(ctx, game);
@@ -271,6 +272,42 @@ export function createHud() {
     if (mission.progress) label(ctx, mission.progress, x + w - 28, pipY + 5, 30, '#ffd34d', 'right', 800, FONT.mono);
     else label(ctx, `REWARD ${moneyText(mission.reward)}`, x + w - 28, pipY + 5, 26, PALETTE.money, 'right', 800, FONT.narrow);
     label(ctx, `NEXT  ${mission.next}`, x + 28, y + 192, 26, PALETTE.muted, 'left', 600, FONT.body);
+  }
+
+  function drawCrewRace(ctx, game) {
+    if (game.staged && !game.crew.enabled && !game.race.active) return;
+    const race = game.race;
+    const crew = game.crew;
+    const x = 34;
+    const y = game.missions.hudState() ? 260 : 196;
+    const w = 626;
+    panel(ctx, x, y, w, 228, '#26efd4');
+    label(ctx, 'STREET RACE', x + 22, y + 30, 30, '#6fffe8', 'left', 900);
+    if (race.active) {
+      const minutes = Math.floor(race.elapsed / 60);
+      const seconds = Math.floor(race.elapsed % 60);
+      const tenths = Math.floor((race.elapsed * 10) % 10);
+      const time = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${tenths}`;
+      label(ctx, time, x + w - 22, y + 30, 30, '#fff4df', 'right', 900, FONT.mono);
+      label(ctx, `CHECKPOINT ${race.checkpoint + 1}/${race.route.length}`, x + 22, y + 68, 27, '#fff4df', 'left', 900);
+      label(ctx, game.player.inCar ? 'DRIVE THROUGH THE GATE' : 'GET IN A CAR', x + w - 22, y + 68, 19, '#b9fff4', 'right', 800, FONT.narrow);
+    } else {
+      label(ctx, '[V] START', x + w - 22, y + 30, 25, '#fff4df', 'right', 900, FONT.narrow);
+      label(ctx, `FINISH FOR ${moneyText(race.reward)}`, x + 22, y + 68, 24, PALETTE.muted, 'left', 700, FONT.narrow);
+    }
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+    ctx.fillRect(x + 22, y + 91, w - 44, 1);
+    label(ctx, 'CREW  [C]', x + 22, y + 118, 26, '#ffd891', 'left', 900);
+    label(ctx, crew.enabled ? 'WITH YOU' : 'STANDBY', x + w - 22, y + 118, 20, PALETTE.muted, 'right', 800, FONT.narrow);
+    crew.members.forEach((member, index) => {
+      const row = y + 157 + index * 36;
+      ctx.fillStyle = member.color;
+      ctx.beginPath();
+      ctx.arc(x + 28, row, 6, 0, Math.PI * 2);
+      ctx.fill();
+      label(ctx, member.name, x + 44, row, 23, '#fff4df', 'left', 900);
+      label(ctx, member.state, x + w - 22, row, 21, member.color, 'right', 800, FONT.narrow);
+    });
   }
 
   function drawMoneyStars(ctx, game) {
@@ -420,6 +457,23 @@ export function createHud() {
       ctx.moveTo(player.x, player.y);
       ctx.lineTo(marker.x, marker.y);
       ctx.stroke();
+      ctx.restore();
+    }
+    const raceMarker = game.race.marker;
+    if (raceMarker) {
+      ctx.save();
+      ctx.setLineDash([32, 16]);
+      ctx.strokeStyle = '#42ffe3';
+      ctx.lineWidth = 18;
+      ctx.beginPath();
+      ctx.moveTo(player.x, player.y);
+      ctx.lineTo(raceMarker.x, raceMarker.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#42ffe3';
+      ctx.beginPath();
+      ctx.arc(raceMarker.x, raceMarker.y, 65, 0, Math.PI * 2);
+      ctx.fill();
       ctx.restore();
     }
     // Mission marker.
@@ -788,7 +842,7 @@ export function createHud() {
 
   function drawEdgePointer(ctx, game) {
     if (!game.project) return;
-    const marker = game.missions.markerList()[0];
+    const marker = game.race.marker ?? game.missions.markerList()[0];
     if (!marker) return;
     const scale = ctx.canvas.width / LOGICAL.width;
     const raw = game.project(marker.x, marker.y);
@@ -804,7 +858,7 @@ export function createHud() {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(angle);
-    ctx.fillStyle = '#ffd34d';
+    ctx.fillStyle = game.race.active ? '#42ffe3' : '#ffd34d';
     ctx.beginPath();
     ctx.moveTo(26, 0);
     ctx.lineTo(-12, -18);
@@ -813,7 +867,7 @@ export function createHud() {
     ctx.fill();
     ctx.restore();
     const dist = Math.round(Math.hypot(marker.x - game.player.x, marker.y - game.player.y) / 8);
-    label(ctx, `${dist} m`, x + Math.cos(angle) * 42, y + Math.sin(angle) * 42, 18, '#ffd34d', 'center', 800, FONT.mono);
+    label(ctx, `${dist} m`, x + Math.cos(angle) * 42, y + Math.sin(angle) * 42, 18, game.race.active ? '#42ffe3' : '#ffd34d', 'center', 800, FONT.mono);
   }
 
   function drawCrosshair(ctx, game) {

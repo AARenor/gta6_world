@@ -2,6 +2,8 @@
 // two ways out of a night (busted, wasted). ?scene=cover|chase|mission|onfoot stages one of the
 // screenshot tableaux and paints it twice, then raises window.__shotReady for the capture.
 
+import { createCrew } from './crew.js';
+import { createRace } from './race.js';
 import { CITY, SAVE_KEY, STEP, WEAPONS } from './config.js';
 import { createRandom } from './random.js';
 import { createAudio } from './audio.js';
@@ -10,7 +12,7 @@ import { stageScene } from './scenes.js';
 import { createHud, drawBusted, drawPause, drawTitle, drawWasted } from './hud.js';
 import { createPolice } from './police.js';
 import { createMissions } from './missions.js';
-import { createPlayer, createInput, updatePlayer, hurtPlayer } from './player.js';
+import { createPlayer, createInput, updatePlayer, hurtPlayer, addMoney } from './player.js';
 import { createCity } from './city.js';
 import { createTraffic, createVehicle, collideVehicles, explodeVehicle, createPeds } from './traffic.js';
 import { createRenderer } from './render.js';
@@ -38,10 +40,12 @@ const hud = createHud();
 
 const start = city.points.safehouse;
 const player = createPlayer(start.x, start.y);
+const crew = createCrew(player, city);
+const race = createRace();
 const vehicles = [];
 
 const game = {
-  city, traffic, peds, police, missions, effects, audio, hud, input, renderer, player, vehicles, rng,
+  city, traffic, peds, police, missions, effects, audio, hud, input, renderer, player, vehicles, rng, crew, race,
   clock: 0,
   hour: 18.55,
   district: 'VELVET SQUARE',
@@ -106,6 +110,8 @@ function resetWorld() {
   police.units.length = 0;
   police.blocks.length = 0;
   police.clearWanted();
+  race.cancel();
+  crew.dismiss();
   missions.setActive(null);
   for (const job of missions.jobs) {
     job.state = job.num === 1 ? 'available' : 'locked';
@@ -173,12 +179,13 @@ function newGame(fromSave = false) {
       }
     }
   }
+  crew.reset(player);
   spawnStarterCar();
   populate();
   game.mode = 'play';
   game.staged = false;
   game.district = city.districtAt(player.x, player.y);
-  announce('Vesper City. Walk with WASD, aim with the mouse, press E to steal a car. Find Mara Quill at the gold ring.');
+  announce('Vesper City. Walk with WASD, aim with the mouse, press E to steal a car, C for your crew and V for a street race.');
   hud.banner('VESPER CITY', 'SUNSET SYNDICATE', 'Find Mara Quill — Velvet Square');
 }
 
@@ -198,6 +205,7 @@ game.onPlayerWasted = () => {
   const fee = Math.min(500, Math.round(player.money * 0.1));
   player.money = Math.max(0, player.money - fee);
   game.overlay = { fee, reason: 'BAY GENERAL PATCHED YOU UP', line: 'The city bills you either way.' };
+  race.cancel();
   player.inCar = null;
   player.dead = true;
   announce('Wasted. Press Enter to get back out there.');
@@ -211,6 +219,7 @@ game.onPlayerBusted = () => {
   player.money = Math.max(0, player.money - fee);
   game.overlay = { fee, reason: 'VCPD HOLDS YOU FOR QUESTIONING', line: 'No record, no lawyer, no night.' };
   police.clearWanted();
+  race.cancel();
   player.inCar = null;
   player.dead = true;
   announce('Busted. Press Enter to walk out.');
@@ -236,6 +245,7 @@ function respawn() {
   if (game.mode === 'wasted') player.health = 85;
   player.armour = 0;
   player.invulnerable = 2.5;
+  if (crew.enabled) crew.reset(player);
   game.mode = 'play';
   game.overlay = null;
   police.clearWanted();
@@ -387,6 +397,24 @@ function handleInput() {
     }
     return true;
   }
+  if (game.mode === 'play' && input.take('KeyC')) {
+    crew.toggle(player);
+    const message = crew.enabled ? 'CREW IS FOLLOWING' : 'CREW ON STANDBY';
+    hud.toast(message);
+    announce(message);
+  }
+  if (game.mode === 'play' && input.take('KeyV')) {
+    if (race.active) {
+      race.cancel();
+      hud.toast('STREET RACE CANCELLED');
+      announce('Street race cancelled.');
+    } else {
+      race.start(player);
+      const message = player.inCar ? 'STREET RACE STARTED' : 'STREET RACE STARTED  |  GET IN A CAR';
+      hud.toast(message);
+      announce(message);
+    }
+  }
   return false;
 }
 
@@ -409,6 +437,18 @@ function update(dt) {
   }
   game.hour = (game.hour + dt * 0.004) % 24;
   updatePlayer(game, dt);
+  crew.update(player, dt);
+  const previousCheckpoint = race.checkpoint;
+  const raceAward = race.update(player, dt);
+  if (raceAward) {
+    const message = `STREET RACE COMPLETE  +$${raceAward.toLocaleString('en-US')}`;
+    addMoney(game, raceAward, message);
+    announce(message);
+  } else if (race.active && race.checkpoint > previousCheckpoint) {
+    const message = `CHECKPOINT ${race.checkpoint}/${race.route.length}`;
+    hud.toast(message);
+    announce(message);
+  }
   traffic.update(dt, game);
   peds.update(dt, game);
   police.update(game, dt);
@@ -505,3 +545,4 @@ if (sceneName) {
     loop(time);
   });
 }
+

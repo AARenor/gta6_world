@@ -22,6 +22,8 @@ function reset(game) {
   game.police.units.length = 0;
   game.police.blocks.length = 0;
   game.police.clearWanted();
+  game.crew.dismiss();
+  game.race.cancel();
   game.effects.particles.length = 0;
   game.effects.tracers.length = 0;
   game.effects.skids.length = 0;
@@ -298,7 +300,6 @@ function stageChase(game) {
   player.health = 51;
   player.armour = 0;
   player.money = 6420;
-
   player.respect = 3;
   game.district = game.city.districtAt(player.x, player.y);
 
@@ -448,6 +449,13 @@ function stageOnfoot(game) {
   player.respect = 1;
   player.weapon = 'smg';
   player.inCar = null;
+  game.crew.reset(player);
+  game.crew.members[0].x = player.x - 28;
+  game.crew.members[0].y = player.y - 30;
+  game.crew.members[1].x = player.x + 55;
+  game.crew.members[1].y = player.y + 20;
+  game.race.start(player);
+  game.race.update(player, 12.4);
   game.district = game.city.districtAt(player.x, player.y);
 
   // A coupe stopped at the kerb with its driver bailing out.

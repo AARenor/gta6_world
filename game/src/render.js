@@ -92,8 +92,10 @@ export function createRenderer(canvas) {
     };
     drawGround(ctx, game, view);
     drawMarkersGround(ctx, game, view);
+    drawRaceGround(ctx, game, view);
     drawShadows(ctx, game, view);
     drawSprites(ctx, game, view);
+    drawRaceGate(ctx, game, view);
     game.effects.drawAbove(ctx);
     drawLights(ctx, game, view);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -418,6 +420,53 @@ export function createRenderer(canvas) {
     }
   }
 
+  function drawRaceGround(ctx, game, view) {
+    const marker = game.race.marker;
+    if (!marker || marker.x < view.x0 || marker.x > view.x1 || marker.y < view.y0 || marker.y > view.y1) return;
+    ctx.save();
+    const glow = ctx.createRadialGradient(marker.x, marker.y, 2, marker.x, marker.y, marker.radius + 18);
+    glow.addColorStop(0, 'rgba(38, 239, 212, 0.24)');
+    glow.addColorStop(1, 'rgba(38, 239, 212, 0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(marker.x, marker.y, marker.radius + 18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#45ffe2';
+    ctx.lineWidth = 4;
+    ctx.setLineDash([12, 8]);
+    ctx.beginPath();
+    ctx.arc(marker.x, marker.y, marker.radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawRaceGate(ctx, game, view) {
+    const marker = game.race.marker;
+    if (!marker || marker.x < view.x0 || marker.x > view.x1 || marker.y < view.y0 || marker.y > view.y1) return;
+    const left = marker.x - marker.radius;
+    const top = marker.y - 54;
+    ctx.save();
+    ctx.shadowColor = '#26efd4';
+    ctx.shadowBlur = 12;
+    ctx.strokeStyle = '#49ffe3';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(left, marker.y);
+    ctx.lineTo(left, top);
+    ctx.lineTo(marker.x + marker.radius, top);
+    ctx.lineTo(marker.x + marker.radius, marker.y);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(12, 23, 30, 0.94)';
+    ctx.fillRect(marker.x - 51, top - 15, 102, 19);
+    ctx.fillStyle = '#bafff3';
+    ctx.font = '900 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('CHECKPOINT', marker.x, top - 5);
+    ctx.restore();
+  }
+
   function drawShadows(ctx, game, view) {
     const city = game.city;
     ctx.save();
@@ -499,6 +548,12 @@ export function createRenderer(canvas) {
       if (ped.x < view.x0 || ped.x > view.x1 || ped.y < view.y0 || ped.y > view.y1) continue;
       items.push({ sort: ped.y, kind: 5, ref: ped });
     }
+    if (game.crew.enabled) {
+      for (const member of game.crew.members) {
+        if (member.inCar || member.x < view.x0 || member.x > view.x1 || member.y < view.y0 || member.y > view.y1) continue;
+        items.push({ sort: member.y, kind: 8, ref: member });
+      }
+    }
     if (!game.player.inCar) items.push({ sort: game.player.y, kind: 6, ref: game.player });
     items.sort((a, b) => a.sort - b.sort);
     for (const item of items) {
@@ -511,6 +566,7 @@ export function createRenderer(canvas) {
         case 5: drawPed(ctx, item.ref); break;
         case 6: drawPlayer(ctx, item.ref); break;
         case 7: drawBillboard(ctx, item.ref); break;
+        case 8: drawCrew(ctx, item.ref); break;
         default: break;
       }
     }
@@ -1061,7 +1117,7 @@ export function createRenderer(canvas) {
       ctx.restore();
       return;
     }
-    const moving = ped.state === 'walk' || ped.state === 'flee' || ped.state === 'cross';
+    const moving = ped.state === 'walk' || ped.state === 'flee' || ped.state === 'cross' || ped.state === 'FOLLOWING';
     const swing = moving ? Math.sin(ped.walk * 3.2) * 3.4 : 0;
     // A soft shadow under every figure, so a crowd reads as silhouettes at a glance.
     ctx.fillStyle = 'rgba(10, 6, 16, 0.45)';
@@ -1136,6 +1192,24 @@ export function createRenderer(canvas) {
       ctx.arc(ped.x, ped.y, 13, 0, Math.PI * 2);
       ctx.stroke();
     }
+  }
+
+  function drawCrew(ctx, member) {
+    ctx.save();
+    ctx.strokeStyle = member.color;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(member.x, member.y, 15, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.font = '900 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#101018';
+    ctx.strokeText(member.name, member.x, member.y - 21);
+    ctx.fillStyle = member.color;
+    ctx.fillText(member.name, member.x, member.y - 21);
+    ctx.restore();
+    drawPed(ctx, member);
   }
 
   function drawPlayer(ctx, player) {
